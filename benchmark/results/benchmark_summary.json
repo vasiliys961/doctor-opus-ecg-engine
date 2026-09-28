@@ -1,0 +1,128 @@
+{
+  "dataset": {
+    "name": "PTB-XL",
+    "version": "1.0.3",
+    "feature_dataset": "PTB-XL+ 1.0.1",
+    "sampling_rate": 500,
+    "waveforms_present": false,
+    "official_feature_sha256": "84143735682f727201cc7f2825c047f98898f9756c6a21729af993b516221556"
+  },
+  "split": {
+    "train": {
+      "ecg_count": 17417,
+      "patient_count": 15023
+    },
+    "val": {
+      "ecg_count": 2183,
+      "patient_count": 1942
+    },
+    "test": {
+      "ecg_count": 2198,
+      "patient_count": 1904
+    }
+  },
+  "models": {
+    "reference_531": {
+      "retrained": false,
+      "test_evaluation": "NOT_RUN",
+      "reason": "official ecgdeli_features.csv absent or checksum rejected"
+    },
+    "raw_cnn": {
+      "architecture": "RawECGCNN",
+      "full_training": "NOT_RUN",
+      "reason": "PTB-XL records500 corpus absent"
+    }
+  },
+  "metrics": {
+    "reference_531": null,
+    "raw_cnn": null
+  },
+  "coverage": [
+    {
+      "family": "interval",
+      "columns": 234,
+      "status": "RECONSTRUCTED",
+      "exact_proven": "false",
+      "runtime_calculated": 0,
+      "coverage_percent_of_531": 44.0678,
+      "known_method": 234,
+      "unknown_or_not_executed": 0
+    },
+    {
+      "family": "RR",
+      "columns": 3,
+      "status": "RECONSTRUCTED",
+      "exact_proven": "false",
+      "runtime_calculated": 0,
+      "coverage_percent_of_531": 0.565,
+      "known_method": 3,
+      "unknown_or_not_executed": 0
+    },
+    {
+      "family": "Framingham",
+      "columns": 3,
+      "status": "RECONSTRUCTED",
+      "exact_proven": "false",
+      "runtime_calculated": 0,
+      "coverage_percent_of_531": 0.565,
+      "known_method": 3,
+      "unknown_or_not_executed": 0
+    },
+    {
+      "family": "amplitude",
+      "columns": 180,
+      "status": "RECONSTRUCTED",
+      "exact_proven": "false",
+      "runtime_calculated": 0,
+      "coverage_percent_of_531": 33.8983,
+      "known_method": 180,
+      "unknown_or_not_executed": 0
+    },
+    {
+      "family": "P_Morph",
+      "columns": 36,
+      "status": "NOT_EXECUTED",
+      "exact_proven": "false",
+      "runtime_calculated": 0,
+      "coverage_percent_of_531": 6.7797,
+      "known_method": 0,
+      "unknown_or_not_executed": 36
+    },
+    {
+      "family": "QT_IntCorr",
+      "columns": 36,
+      "status": "RECONSTRUCTED",
+      "exact_proven": "false",
+      "runtime_calculated": 0,
+      "coverage_percent_of_531": 6.7797,
+      "known_method": 36,
+      "unknown_or_not_executed": 0
+    },
+    {
+      "family": "ST_Elev",
+      "columns": 36,
+      "status": "UNKNOWN",
+      "exact_proven": "false",
+      "runtime_calculated": 0,
+      "coverage_percent_of_531": 6.7797,
+      "known_method": 0,
+      "unknown_or_not_executed": 36
+    },
+    {
+      "family": "HA__Global",
+      "columns": 3,
+      "status": "UNKNOWN",
+      "exact_proven": "false",
+      "runtime_calculated": 0,
+      "coverage_percent_of_531": 0.565,
+      "known_method": 0,
+      "unknown_or_not_executed": 3
+    }
+  ],
+  "reproducibility": {
+    "seed": 42,
+    "augmentation": false,
+    "raw_vector_to_existing_ensemble": false,
+    "raw_to_531_status": "NOT_PROVEN"
+  }
+}

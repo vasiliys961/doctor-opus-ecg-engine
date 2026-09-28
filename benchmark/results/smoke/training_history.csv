@@ -1,0 +1,3 @@
+epoch,train_loss,val_loss,val_macro_auroc,val_macro_auprc,learning_rate
+1,0.691811740398407,0.6780236959457397,1.0,1.0,0.001
+2,0.677955150604248,0.6622742414474487,1.0,1.0,0.001

@@ -1,5 +1,10 @@
 _audit/
 .venv/
+research/ecgdeli_reproduction/data/
+research/ecgdeli_reproduction/output/
 __pycache__/
 .pytest_cache/
 *.pyc
+benchmark/data/
+benchmark/cache/
+benchmark/results/**/*.pth

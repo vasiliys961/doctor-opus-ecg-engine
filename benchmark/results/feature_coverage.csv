@@ -1,0 +1,9 @@
+family,columns,status,exact_proven,runtime_calculated,coverage_percent_of_531,known_method,unknown_or_not_executed
+interval,234,RECONSTRUCTED,false,0,44.0678,234,0
+RR,3,RECONSTRUCTED,false,0,0.565,3,0
+Framingham,3,RECONSTRUCTED,false,0,0.565,3,0
+amplitude,180,RECONSTRUCTED,false,0,33.8983,180,0
+P_Morph,36,NOT_EXECUTED,false,0,6.7797,0,36
+QT_IntCorr,36,RECONSTRUCTED,false,0,6.7797,36,0
+ST_Elev,36,UNKNOWN,false,0,6.7797,0,36
+HA__Global,3,UNKNOWN,false,0,0.565,0,3

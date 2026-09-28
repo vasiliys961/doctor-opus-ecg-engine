@@ -1,0 +1,5 @@
+# Дополнительных пакетов нет: benchmark использует numpy, pandas и torch из requirements.txt.
+# scikit-learn и wfdb не требуются. PyYAML не требуется.
+numpy==1.26.4
+pandas==2.2.3
+torch==2.5.0

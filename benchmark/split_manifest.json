@@ -1,0 +1,101 @@
+{
+  "strategy": "ptbxl_official_strat_fold",
+  "seed": 42,
+  "dataset_version": "PTB-XL 1.0.3",
+  "forensic_records_excluded": [
+    "00513"
+  ],
+  "generated_at": "2026-09-28T22:13:09+00:00",
+  "splits": {
+    "train": {
+      "ecg_count": 17417,
+      "patient_count": 15023,
+      "positive_labels": {
+        "SR": 13403,
+        "NORM": 7596,
+        "ABQRS": 2683,
+        "IMI": 2142,
+        "ASMI": 1887,
+        "LVH": 1707,
+        "NDT": 1461,
+        "LAFB": 1298,
+        "AFIB": 1211,
+        "PVC": 915,
+        "IRBBB": 894,
+        "VCLVH": 701,
+        "STACH": 661,
+        "IVCD": 630,
+        "SARRH": 618,
+        "ISCAL": 527,
+        "SBRAD": 509,
+        "QWAVE": 438,
+        "CRBBB": 432,
+        "CLBBB": 428,
+        "ILMI": 383,
+        "LOWT": 350,
+        "PAC": 318,
+        "AMI": 282
+      }
+    },
+    "val": {
+      "ecg_count": 2183,
+      "patient_count": 1942,
+      "positive_labels": {
+        "SR": 1670,
+        "NORM": 955,
+        "ABQRS": 322,
+        "IMI": 266,
+        "ASMI": 236,
+        "LVH": 210,
+        "NDT": 182,
+        "LAFB": 163,
+        "AFIB": 151,
+        "PVC": 114,
+        "IRBBB": 112,
+        "VCLVH": 87,
+        "STACH": 83,
+        "IVCD": 78,
+        "SARRH": 77,
+        "ISCAL": 66,
+        "SBRAD": 64,
+        "QWAVE": 55,
+        "CRBBB": 55,
+        "CLBBB": 54,
+        "ILMI": 47,
+        "LOWT": 44,
+        "PAC": 40,
+        "AMI": 36
+      }
+    },
+    "test": {
+      "ecg_count": 2198,
+      "patient_count": 1904,
+      "positive_labels": {
+        "SR": 1674,
+        "NORM": 963,
+        "ABQRS": 322,
+        "IMI": 267,
+        "ASMI": 234,
+        "LVH": 214,
+        "NDT": 182,
+        "LAFB": 162,
+        "AFIB": 152,
+        "PVC": 114,
+        "IRBBB": 112,
+        "VCLVH": 87,
+        "STACH": 82,
+        "IVCD": 79,
+        "SARRH": 77,
+        "ISCAL": 66,
+        "SBRAD": 64,
+        "QWAVE": 55,
+        "CRBBB": 54,
+        "CLBBB": 54,
+        "ILMI": 48,
+        "LOWT": 44,
+        "PAC": 40,
+        "AMI": 35
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+seed: 42
+sampling_rate: 500
+duration_seconds: 10
+channels: 12
+samples: 5000
+batch_size: 32
+epochs: 20
+learning_rate: 0.001
+weight_decay: 0.0001
+optimizer: AdamW
+loss: BCEWithLogitsLoss
+class_weighting: false
+augmentation: false
+early_stopping:
+  metric: macro_auroc
+  patience: 5
+threshold_selection:
+  method: validation_f1
+  grid_min: 0.01
+  grid_max: 0.99
+  grid_step: 0.01
+bootstrap:
+  iterations: 1000
+  seed: 42
+smoke:
+  epochs: 2
+  batch_size: 4
+  records: 8
+split:
+  strategy: ptbxl_official_strat_fold
+  train_folds: [1, 2, 3, 4, 5, 6, 7, 8]
+  val_folds: [9]
+  test_folds: [10]
+  forensic_excluded_ecg_ids: [513]
+paths:
+  ptbxl_database: benchmark/data/ptbxl/ptbxl_database.csv
+  records500: benchmark/data/ptbxl/records500
+  ecgdeli_features: benchmark/data/ptbxl_plus/ecgdeli_features.csv
+  ensemble_dir: models/ecg_ensemble
+  reference_fixture: tests/fixtures/another_ecg_features.csv

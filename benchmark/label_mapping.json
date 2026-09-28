@@ -1,0 +1,74 @@
+{
+  "SR": [
+    "SR"
+  ],
+  "NORM": [
+    "NORM"
+  ],
+  "ABQRS": [
+    "ABQRS"
+  ],
+  "IMI": [
+    "IMI"
+  ],
+  "ASMI": [
+    "ASMI"
+  ],
+  "LVH": [
+    "LVH"
+  ],
+  "NDT": [
+    "NDT"
+  ],
+  "LAFB": [
+    "LAFB"
+  ],
+  "AFIB": [
+    "AFIB"
+  ],
+  "PVC": [
+    "PVC"
+  ],
+  "IRBBB": [
+    "IRBBB"
+  ],
+  "VCLVH": [
+    "VCLVH"
+  ],
+  "STACH": [
+    "STACH"
+  ],
+  "IVCD": [
+    "IVCD"
+  ],
+  "SARRH": [
+    "SARRH"
+  ],
+  "ISCAL": [
+    "ISCAL"
+  ],
+  "SBRAD": [
+    "SBRAD"
+  ],
+  "QWAVE": [
+    "QWAVE"
+  ],
+  "CRBBB": [
+    "CRBBB"
+  ],
+  "CLBBB": [
+    "CLBBB"
+  ],
+  "ILMI": [
+    "ILMI"
+  ],
+  "LOWT": [
+    "LOWT"
+  ],
+  "PAC": [
+    "PAC"
+  ],
+  "AMI": [
+    "AMI"
+  ]
+}

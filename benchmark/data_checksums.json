@@ -1,0 +1,12 @@
+{
+  "ptbxl_database.csv": {
+    "sha256": "7600de9c1b27d181d850b3c6038a35d7c3ddb6bb33b702e3a20252a6859d216b",
+    "source": "local PTB-XL 1.0.3 metadata used to build benchmark/splits",
+    "committed": false
+  },
+  "ecgdeli_features.csv": {
+    "sha256_expected": "84143735682f727201cc7f2825c047f98898f9756c6a21729af993b516221556",
+    "source": "PTB-XL+ 1.0.1 features/ecgdeli_features.csv",
+    "status": "not_accepted_until_checksum_matches"
+  }
+}

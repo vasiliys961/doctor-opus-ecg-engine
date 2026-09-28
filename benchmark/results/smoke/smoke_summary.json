@@ -1,0 +1,8 @@
+{
+  "kind": "synthetic_smoke",
+  "ptbxl_waveforms_used": false,
+  "forward_backward_evaluation": true,
+  "device": "mps",
+  "best_epoch": 1,
+  "best_val_macro_auroc": 1.0
+}
