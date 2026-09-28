@@ -32,6 +32,9 @@ split:
   val_folds: [9]
   test_folds: [10]
   forensic_excluded_ecg_ids: [513]
+data:
+  ptbxl_root: null
+  ecgdeli_features: null
 paths:
   ptbxl_database: benchmark/data/ptbxl/ptbxl_database.csv
   records500: benchmark/data/ptbxl/records500

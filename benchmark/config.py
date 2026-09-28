@@ -10,6 +10,8 @@ CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
 
 def _scalar(token: str) -> object:
     text = token.strip()
+    if text in {"null", "Null", "NULL", "~"}:
+        return None
     if text in {"true", "false"}:
         return text == "true"
     if text.startswith("[") and text.endswith("]"):

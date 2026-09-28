@@ -46,6 +46,25 @@ def parse_scp_codes(raw: object) -> dict[str, float]:
     return {str(key): float(value) for key, value in parsed.items()}
 
 
+def validate_binary_targets(labels: np.ndarray, split_name: str) -> list[str]:
+    """24 столбца из 0 и 1. Пустой положительный класс не подменяется 0.5."""
+    matrix = np.asarray(labels)
+    if matrix.ndim != 2 or matrix.shape[1] != len(TARGET_CODES):
+        raise ValueError(f"Ожидались 24 цели, получено {getattr(matrix, 'shape', None)}.")
+    if not np.isfinite(matrix).all():
+        raise ValueError(f"В целях split {split_name} есть NaN или Inf.")
+    flat = matrix.reshape(-1)
+    if not np.isin(flat, (0.0, 1.0)).all():
+        raise ValueError(f"Цели split {split_name} должны быть только 0 или 1.")
+    warnings = []
+    for index, code in enumerate(TARGET_CODES):
+        if int(matrix[:, index].sum()) == 0:
+            message = f"WARNING: label {code} has zero positives in split {split_name}"
+            print(message)
+            warnings.append(message)
+    return warnings
+
+
 def scp_to_targets(scp_codes: object, table: dict[str, list[str]] | None = None) -> np.ndarray:
     codes = parse_scp_codes(scp_codes)
     used = table or mapping_table()

@@ -1,0 +1,5 @@
+classification: NO_RAW_DATA
+traceback: none
+training was not started
+
+В /Users/maxmobiles.ru/Desktop/ECG-opus/research/ecgdeli_reproduction/data/ptbxl/records500 найдено заголовков 1. Ни один не входит в train/val/test. Запись 00513, если она единственная, исключена из benchmark split и не заменяет корпус.

@@ -12,18 +12,45 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from benchmark.data import train_lead_statistics
-from benchmark.label_mapping import TARGET_CODES
+from benchmark.label_mapping import TARGET_CODES, validate_binary_targets
 from benchmark.metrics import binary_auprc, binary_auroc, macro_mean
-from benchmark.raw_model.dataset import WaveformDataset
+from benchmark.raw_model.dataset import LazyWaveformDataset, WaveformDataset, stream_lead_statistics
 from benchmark.raw_model.model import RawECGCNN
 
 
-def pick_device() -> torch.device:
+def pick_device(requested: str | None = None) -> torch.device:
+    if requested == "cpu":
+        return torch.device("cpu")
+    if requested == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA requested but not available")
+        return torch.device("cuda")
+    if requested == "mps":
+        mps = getattr(torch.backends, "mps", None)
+        if mps is None or not mps.is_available():
+            raise RuntimeError("MPS requested but not available")
+        return torch.device("mps")
     if torch.cuda.is_available():
         return torch.device("cuda")
-    if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+    mps = getattr(torch.backends, "mps", None)
+    if mps is not None and mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
+
+
+def ensure_benchmark_device(requested: str | None = None) -> torch.device:
+    """Ошибка Apple MPS переводит только benchmark на CPU. Production ensemble не меняется."""
+    device = pick_device(requested)
+    if device.type != "mps":
+        return device
+    try:
+        probe = RawECGCNN().to(device)
+        loss = probe(torch.zeros(1, 12, 64, device=device)).sum()
+        loss.backward()
+        return device
+    except RuntimeError as exc:
+        print(f"MPS error, benchmark fallback to CPU: {exc}")
+        return torch.device("cpu")
 
 
 def set_seed(seed: int) -> None:
@@ -65,24 +92,18 @@ def macro_auroc(y_true: np.ndarray, y_prob: np.ndarray) -> float:
     return macro_mean([binary_auroc(y_true[:, index], y_prob[:, index]) for index in range(y_true.shape[1])])
 
 
-def fit_raw_model(
-    signals: np.ndarray,
-    labels: np.ndarray,
-    parts: np.ndarray,
+def _fit_loaders(
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+    train_labels: np.ndarray,
+    mean: np.ndarray,
+    std: np.ndarray,
     config: dict,
     output_dir: Path,
+    device: torch.device,
 ) -> dict[str, object]:
-    if config.get("augmentation"):
-        raise RuntimeError("Augmentation в основном benchmark выключена.")
-    set_seed(int(config["seed"]))
-    device = pick_device()
-    train_mask = parts == "train"
-    val_mask = parts == "val"
-    mean, std = train_lead_statistics(signals[train_mask])
-    train_loader = _loader(signals[train_mask], labels[train_mask], mean, std, int(config["batch_size"]))
-    val_loader = _loader(signals[val_mask], labels[val_mask], mean, std, int(config["batch_size"]))
     model = RawECGCNN(num_classes=len(TARGET_CODES)).to(device)
-    criterion = _loss_function(config, labels[train_mask]).to(device)
+    criterion = _loss_function(config, train_labels).to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=float(config["learning_rate"]),
@@ -163,4 +184,90 @@ def fit_raw_model(
         "optimizer": config["optimizer"],
     }
     (output_dir / "model_config.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    history = (output_dir / "training_history.csv").read_text(encoding="utf-8").strip().splitlines()
+    checkpoint = output_dir / "best_model.pth"
+    if len(history) < 2 or not checkpoint.is_file() or int(metadata["best_epoch"]) < 1:
+        raise RuntimeError("Обучение не прогрессировало: нет checkpoint, history или выбранной модели.")
     return metadata
+
+
+def _fit_with_fallback(
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+    train_labels: np.ndarray,
+    mean: np.ndarray,
+    std: np.ndarray,
+    config: dict,
+    output_dir: Path,
+    device: torch.device,
+) -> dict[str, object]:
+    try:
+        return _fit_loaders(train_loader, val_loader, train_labels, mean, std, config, output_dir, device)
+    except RuntimeError as exc:
+        if device.type != "mps":
+            raise
+        print(f"MPS error, benchmark fallback to CPU: {exc}")
+        cpu = torch.device("cpu")
+        return _fit_loaders(train_loader, val_loader, train_labels, mean, std, config, output_dir, cpu)
+
+
+def fit_raw_model(
+    signals: np.ndarray,
+    labels: np.ndarray,
+    parts: np.ndarray,
+    config: dict,
+    output_dir: Path,
+) -> dict[str, object]:
+    if config.get("augmentation"):
+        raise RuntimeError("Augmentation в основном benchmark выключена.")
+    device = ensure_benchmark_device(config.get("device"))
+    set_seed(int(config["seed"]))
+    train_mask = parts == "train"
+    val_mask = parts == "val"
+    validate_binary_targets(labels[train_mask], "train")
+    validate_binary_targets(labels[val_mask], "val")
+    mean, std = train_lead_statistics(signals[train_mask])
+    train_loader = _loader(signals[train_mask], labels[train_mask], mean, std, int(config["batch_size"]))
+    val_loader = _loader(signals[val_mask], labels[val_mask], mean, std, int(config["batch_size"]))
+    return _fit_with_fallback(
+        train_loader,
+        val_loader,
+        labels[train_mask],
+        mean,
+        std,
+        config,
+        output_dir,
+        device,
+    )
+
+
+def fit_lazy_records(
+    train_headers: list[Path],
+    train_labels: np.ndarray,
+    val_headers: list[Path],
+    val_labels: np.ndarray,
+    config: dict,
+    output_dir: Path,
+) -> dict[str, object]:
+    """Обучение по файлам records500. В RAM лежит один batch, не весь корпус."""
+    if config.get("augmentation"):
+        raise RuntimeError("Augmentation в основном benchmark выключена.")
+    device = ensure_benchmark_device(config.get("device"))
+    set_seed(int(config["seed"]))
+    validate_binary_targets(train_labels, "train")
+    validate_binary_targets(val_labels, "val")
+    mean, std = stream_lead_statistics(train_headers)
+    batch_size = int(config["batch_size"])
+    train_loader = DataLoader(
+        LazyWaveformDataset(train_headers, train_labels, mean, std),
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=0,
+    )
+    val_loader = DataLoader(
+        LazyWaveformDataset(val_headers, val_labels, mean, std),
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=0,
+    )
+    return _fit_with_fallback(train_loader, val_loader, train_labels, mean, std, config, output_dir, device)
