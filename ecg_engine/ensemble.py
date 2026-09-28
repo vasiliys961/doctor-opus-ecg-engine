@@ -16,8 +16,8 @@ import numpy as np
 import torch
 
 from ecg_engine.networks import ECG1DCNN, create_mlp_model, resnet18_1d
-from ecg_engine.schema import ECG531Input, ECGSchemaError, read_ecg531_csv
-from ecg_engine.scp import TOP_24_CODES
+from ecg_engine.schema import ECG531Input, ECGSchemaError, read_ecg531_csv, read_feature_mapping
+from ecg_engine.scp import SCP_OUTPUTS, TOP_24_CODES
 from ecg_engine.version import (
     FEATURE_SCHEMA_VERSION,
     INPUT_SCHEMA,
@@ -166,3 +166,34 @@ def get_ensemble(model_dir: str) -> Ensemble:
 def predict_csv(csv_path: str, model_dir: str | os.PathLike | None = None) -> EnsemblePrediction:
     directory = str(Path(model_dir) if model_dir else default_model_dir())
     return get_ensemble(directory).predict(read_ecg531_csv(csv_path))
+
+
+def predict_features(features: object, model_dir: str | os.PathLike | None = None) -> EnsemblePrediction:
+    directory = str(Path(model_dir) if model_dir else default_model_dir())
+    return get_ensemble(directory).predict(read_feature_mapping(features))
+
+
+def service_payload(prediction: EnsemblePrediction) -> dict:
+    """Контракт POST /api/ecg/predict. probability — сигмоида, не калиброванный риск."""
+    if prediction.ensemble.shape != (len(SCP_OUTPUTS),):
+        raise RuntimeError("Выход ансамбля должен содержать 24 значения.")
+    predictions = [
+        {
+            "scp_code": item.model_code,
+            "label_en": item.canonical_description,
+            "label_ru": item.legacy_display_name,
+            "probability": float(prediction.ensemble[item.index]),
+        }
+        for item in SCP_OUTPUTS
+    ]
+    return {
+        "model_version": MODEL_VERSION,
+        "feature_count": 531,
+        "predictions": predictions,
+        "models": {
+            "mlp": [float(value) for value in prediction.heads["MLP"]],
+            "cnn": [float(value) for value in prediction.heads["CNN"]],
+            "resnet1d": [float(value) for value in prediction.heads["ResNet"]],
+            "ensemble": [float(value) for value in prediction.ensemble],
+        },
+    }

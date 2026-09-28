@@ -78,6 +78,36 @@ def _finite_value(column: str, raw: object) -> float:
     return number
 
 
+def read_feature_mapping(features: object) -> ECG531Input:
+    """Собирает вектор по именам колонок.
+
+    JSON-объект не хранит порядок надёжно, поэтому значение кладётся в канонический
+    индекс своего имени. Набор имён должен совпасть со схемой: лишние ключи не
+    отбрасываются, недостающие не заполняются.
+    """
+    if not isinstance(features, dict):
+        raise ECGSchemaError(
+            "Поле features должно быть объектом из 531 именованных признаков. "
+            "Список без имён не принимается."
+        )
+    actual = [key for key in features if key != IDENTIFIER_COLUMN]
+    expected = list(FEATURE_COLUMNS)
+    missing = [name for name in expected if name not in features]
+    unknown = [name for name in actual if name not in expected]
+    if missing or unknown or len(actual) != FEATURE_COUNT:
+        parts = [f"Ожидается ровно {FEATURE_COUNT} признаков."]
+        if missing:
+            parts.append(f"Нет колонок: {', '.join(missing[:8])}.")
+        if unknown:
+            parts.append(f"Неизвестные колонки: {', '.join(unknown[:8])}.")
+        raise ECGSchemaError(" ".join(parts))
+    values = np.asarray(
+        [_finite_value(column, features[column]) for column in FEATURE_COLUMNS],
+        dtype=np.float64,
+    )
+    return ECG531Input(values=values, row_index=0, rows_in_file=1)
+
+
 def read_ecg531_csv(csv_path: str) -> ECG531Input:
     """Читает первую строку CSV и проверяет её по каноническому порядку колонок."""
     try:

@@ -53,6 +53,8 @@ Reconstructed raw ECG features are not claimed to be numerically identical to th
 
 Неизвестная колонка не заменяется нулём, медианой или соседним признаком. В сыром режиме значение остаётся пустым, маска равна 0.
 
+Колонка `value_00513` в `experiments/raw_to_531/step13_feature_status.csv` — forensic-число шагов 7–12, если оно было посчитано. `POST /api/ecg/raw/features` эти числа не подставляет.
+
 ## D. Ensemble compatibility
 
 ```text
