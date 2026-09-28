@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doctor Opus ECG Engine</title>
+  <style>
+    :root { color-scheme: light; --ink: #1c2430; --line: #d5dbe3; --paper: #f4f7f8; --accent: #0f6e6e; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 16px/1.45 "Iowan Old Style", Palatino, Georgia, serif; color: var(--ink); background: var(--paper); }
+    main { max-width: 1080px; margin: 0 auto; padding: 28px 20px 64px; }
+    h1 { font-size: 1.8rem; margin: 0 0 8px; }
+    .note { color: #4d5968; max-width: 68ch; }
+    .modes { display: flex; gap: 8px; margin: 22px 0; }
+    button, .file input { font: inherit; }
+    .modes button, .primary { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+    .modes button.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .primary { background: var(--accent); color: white; border-color: var(--accent); }
+    section { display: none; background: white; border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+    section.active { display: block; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 12px 0; }
+    label.file { display: inline-block; }
+    textarea { width: 100%; min-height: 72px; font: inherit; padding: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .score { font-variant-numeric: tabular-nums; text-align: right; }
+    .stage { display: grid; grid-template-columns: 1.4fr 0.8fr; gap: 16px; }
+    .preview-wrap { position: relative; overflow: auto; border: 1px solid var(--line); background: #fff; }
+    .preview-wrap img { display: block; max-width: 100%; }
+    .preview-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .handle { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #0f6e6e; border: 2px solid white; cursor: grab; }
+    .error { color: #8d1d1d; }
+    .coming { background: #eef3f3; }
+    @media (max-width: 800px) { .stage { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Doctor Opus ECG Engine</h1>
+  <p class="note">Исследовательская система поддержки решения. Число сети — сигмоида ансамбля, не калиброванная клиническая вероятность.</p>
+  <div class="modes">
+    <button type="button" id="tab-image" class="active">ECG Image</button>
+    <button type="button" id="tab-csv">ECG 531 Features</button>
+    <button type="button" id="tab-raw">Raw 12-lead</button>
+  </div>
+
+  <section id="panel-image" class="active">
+    <h2>Изображение ЭКГ</h2>
+    <p class="note">Файл показывается как есть. Края не закрашиваются, картинка на сервере не перекодируется. PDF и одноканальный USB-снимок сюда не входят как raw 12-lead.</p>
+    <div class="row">
+      <label class="file">Изображение <input id="image-file" type="file" accept="image/jpeg,image/png,image/gif,image/webp"></label>
+      <button class="primary" id="analyze-image" type="button">Разобрать изображение</button>
+    </div>
+    <label>Клинический контекст без фамилии и контактов<br><textarea id="context"></textarea></label>
+    <div class="stage">
+      <div>
+        <div class="preview-wrap" id="preview-box" hidden>
+          <img id="preview" alt="Загруженная ЭКГ">
+          <svg id="caliper"></svg>
+          <div class="handle" id="handle-a"></div>
+          <div class="handle" id="handle-b"></div>
+        </div>
+      </div>
+      <div>
+        <h3>Линейка</h3>
+        <p class="note">Калибровка вручную: сколько пикселей в 1 мм сетки. Скорость меняет время, усиление меняет напряжение. Сетка сама не распознаётся.</p>
+        <label>Пикселей на 1 мм <input id="px-per-mm" type="number" min="0.1" step="0.1" value="4"></label>
+        <div class="row">
+          <label><input type="radio" name="speed" value="25" checked> 25 мм/с</label>
+          <label><input type="radio" name="speed" value="50"> 50 мм/с</label>
+        </div>
+        <label>Усиление, мм/мВ <input id="gain" type="number" min="1" step="1" value="10"></label>
+        <p id="caliper-readout">Интервал: — · Амплитуда: —</p>
+      </div>
+    </div>
+    <p id="image-error" class="error"></p>
+    <h3>JSON наблюдателя</h3>
+    <pre id="extraction"></pre>
+    <h3>Интерпретация</h3>
+    <pre id="interpretation"></pre>
+  </section>
+
+  <section id="panel-csv">
+    <h2>531 признак</h2>
+    <p class="note">CSV с колонкой ecg_id, если она есть, и ровно 531 признаком в порядке обучения. Первая строка. Порога нет.</p>
+    <div class="row">
+      <label class="file">CSV <input id="csv-file" type="file" accept=".csv,text/csv"></label>
+    </div>
+    <p id="csv-error" class="error"></p>
+    <table>
+      <thead><tr><th>Код</th><th>English</th><th>Русское название</th><th>Score</th></tr></thead>
+      <tbody id="predictions"></tbody>
+    </table>
+  </section>
+
+  <section id="panel-raw" class="coming">
+    <h2>RAW ECG → FEATURE COMPATIBILITY</h2>
+    <p class="note">Reconstructed 531-feature representation. Это не опубликованные признаки PTB-XL+.</p>
+    <p id="raw-counts">531 features generated · reconstructed — · not executed — · unknown —</p>
+    <p id="raw-warning">⚠ Exact PTB-XL+ compatibility: NOT PROVEN</p>
+    <p class="note">Существующий ансамбль на этот вектор не запускается. Неизвестные колонки остаются пустыми.</p>
+    <button class="primary" id="check-raw" type="button">Проверить контракт слоя</button>
+    <p id="raw-error" class="error"></p>
+    <pre id="raw-result"></pre>
+  </section>
+</main>
+<script>
+const tabs = ["image", "csv", "raw"];
+tabs.forEach((name) => {
+  document.getElementById("tab-" + name).onclick = () => {
+    tabs.forEach((other) => {
+      document.getElementById("tab-" + other).classList.toggle("active", other === name);
+      document.getElementById("panel-" + other).classList.toggle("active", other === name);
+    });
+  };
+});
+
+const preview = document.getElementById("preview");
+const box = document.getElementById("preview-box");
+const svg = document.getElementById("caliper");
+const handleA = document.getElementById("handle-a");
+const handleB = document.getElementById("handle-b");
+let points = [{ x: 40, y: 80 }, { x: 160, y: 80 }];
+let drag = null;
+
+function placeHandles() {
+  handleA.style.left = points[0].x + "px";
+  handleA.style.top = points[0].y + "px";
+  handleB.style.left = points[1].x + "px";
+  handleB.style.top = points[1].y + "px";
+  svg.innerHTML = `<line x1="${points[0].x}" y1="${points[0].y}" x2="${points[1].x}" y2="${points[1].y}" stroke="#0f6e6e" stroke-width="2"/>`;
+  const pxPerMm = Number(document.getElementById("px-per-mm").value);
+  const speed = Number(document.querySelector("input[name=speed]:checked").value);
+  const gain = Number(document.getElementById("gain").value);
+  const dx = Math.abs(points[1].x - points[0].x);
+  const dy = Math.abs(points[1].y - points[0].y);
+  if (!(pxPerMm > 0) || !(speed > 0) || !(gain > 0)) {
+    document.getElementById("caliper-readout").textContent = "Нужна калибровка px/мм, скорость и усиление.";
+    return;
+  }
+  const timeMs = dx / pxPerMm * (1000 / speed);
+  const milliVolts = dy / pxPerMm / gain;
+  document.getElementById("caliper-readout").textContent =
+    `Интервал: ${timeMs.toFixed(0)} мс · Амплитуда: ${milliVolts.toFixed(2)} мВ`;
+}
+
+function bindHandle(node, index) {
+  node.onpointerdown = (event) => {
+    drag = index;
+    node.setPointerCapture(event.pointerId);
+  };
+  node.onpointermove = (event) => {
+    if (drag !== index) return;
+    const rect = box.getBoundingClientRect();
+    points[index] = {
+      x: Math.max(0, event.clientX - rect.left + box.scrollLeft),
+      y: Math.max(0, event.clientY - rect.top + box.scrollTop),
+    };
+    placeHandles();
+  };
+  node.onpointerup = () => { drag = null; };
+}
+
+bindHandle(handleA, 0);
+bindHandle(handleB, 1);
+document.getElementById("px-per-mm").oninput = placeHandles;
+document.getElementById("gain").oninput = placeHandles;
+document.querySelectorAll("input[name=speed]").forEach((node) => { node.onchange = placeHandles; });
+
+document.getElementById("image-file").onchange = () => {
+  const file = document.getElementById("image-file").files[0];
+  document.getElementById("image-error").textContent = "";
+  if (!file) return;
+  preview.src = URL.createObjectURL(file);
+  box.hidden = false;
+  preview.onload = placeHandles;
+};
+
+document.getElementById("analyze-image").onclick = async () => {
+  const file = document.getElementById("image-file").files[0];
+  const error = document.getElementById("image-error");
+  error.textContent = "";
+  if (!file) {
+    error.textContent = "Сначала выберите изображение.";
+    return;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  body.append("clinical_context", document.getElementById("context").value);
+  const response = await fetch("/api/ecg/image", { method: "POST", body });
+  const payload = await response.json();
+  if (!response.ok) {
+    error.textContent = payload.detail || "Анализ изображения не выполнен.";
+    return;
+  }
+  document.getElementById("extraction").textContent = JSON.stringify(payload.extraction || payload.observer_text, null, 2);
+  document.getElementById("interpretation").textContent = payload.interpretation || "";
+};
+
+function splitCsvLine(line) {
+  return line.split(",").map((cell) => cell.trim().replace(/^"|"$/g, ""));
+}
+
+document.getElementById("csv-file").onchange = async () => {
+  const file = document.getElementById("csv-file").files[0];
+  const error = document.getElementById("csv-error");
+  error.textContent = "";
+  document.getElementById("predictions").innerHTML = "";
+  if (!file) return;
+  const text = await file.text();
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) {
+    error.textContent = "В CSV нет строки данных.";
+    return;
+  }
+  const header = splitCsvLine(lines[0]);
+  const row = splitCsvLine(lines[1]);
+  const features = {};
+  header.forEach((name, index) => {
+    if (name !== "ecg_id") features[name] = row[index];
+  });
+  const response = await fetch("/api/ecg/predict", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ features }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    error.textContent = payload.detail || "Инференс не выполнен.";
+    return;
+  }
+  const body = document.getElementById("predictions");
+  payload.predictions.forEach((item) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${item.scp_code}</td><td>${item.label_en}</td><td>${item.label_ru}</td><td class="score">${item.probability.toFixed(4)}</td>`;
+    body.appendChild(tr);
+  });
+};
+
+document.getElementById("check-raw").onclick = async () => {
+  const error = document.getElementById("raw-error");
+  error.textContent = "";
+  const leads = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"];
+  const signal = Array.from({ length: 20 }, () => leads.map(() => 0));
+  const response = await fetch("/api/ecg/raw/features", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ signal, sampling_rate: 500, lead_names: leads }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    error.textContent = payload.detail || "Слой совместимости не ответил.";
+    return;
+  }
+  const counts = payload.counts || {};
+  document.getElementById("raw-counts").textContent =
+    `${payload.feature_count} features generated · ${counts.reconstructed} features reconstructed · ${counts.not_executed} features not executed · ${counts.unknown} features unknown`;
+  document.getElementById("raw-result").textContent = JSON.stringify({
+    status: payload.status,
+    raw_to_531_status: payload.raw_to_531_status,
+    feature_count: payload.feature_count,
+    prediction: payload.prediction,
+  }, null, 2);
+};
+</script>
+</body>
+</html>

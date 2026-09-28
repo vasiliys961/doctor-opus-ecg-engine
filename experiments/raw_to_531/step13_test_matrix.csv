@@ -1,0 +1,7 @@
+test_id,record,feature_family,expected_status,actual_status,passed,notes
+00513-intervals,00513,intervals,RECONSTRUCTED,RECONSTRUCTED,true,registry status; values are not claimed exact
+00513-amplitudes,00513,amplitudes,RECONSTRUCTED,RECONSTRUCTED,true,registry status; values are not claimed exact
+00513-pmorph,00513,P_Morph,NOT_EXECUTED,NOT_EXECUTED,true,registry status; values are not claimed exact
+00513-qt,00513,QT_IntCorr,RECONSTRUCTED,RECONSTRUCTED,true,registry status; values are not claimed exact
+00513-st,00513,ST_Elev,UNKNOWN,UNKNOWN,true,registry status; values are not claimed exact
+00513-ha,00513,HA_Global,UNKNOWN,UNKNOWN,true,registry status; values are not claimed exact

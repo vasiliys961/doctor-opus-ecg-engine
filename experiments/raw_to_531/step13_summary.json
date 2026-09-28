@@ -1,0 +1,17 @@
+{
+  "raw_to_531_status": "NOT_PROVEN",
+  "reference_ensemble_status": "VALID",
+  "total_features": 531,
+  "families": {
+    "interval_rr_framingham": 240,
+    "amplitude": 180,
+    "p_morph": 36,
+    "qt_intcorr": 36,
+    "st_elev": 36,
+    "ha_global": 3
+  },
+  "raw_inference": {
+    "supported": false,
+    "reason": "Full exact 531-feature reconstruction has not been established."
+  }
+}
