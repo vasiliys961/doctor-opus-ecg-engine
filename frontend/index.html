@@ -2,25 +2,44 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f6e6e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ЭКГ">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <title>Doctor Opus ECG Engine</title>
   <style>
     :root { color-scheme: light; --ink: #1c2430; --line: #d5dbe3; --paper: #f4f7f8; --accent: #0f6e6e; }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
-    body { margin: 0; font: 16px/1.45 "Iowan Old Style", Palatino, Georgia, serif; color: var(--ink); background: var(--paper); }
-    main { max-width: 1080px; margin: 0 auto; padding: 28px 20px 64px; }
-    h1 { font-size: 1.8rem; margin: 0 0 8px; }
+    body { margin: 0; font: 19px/1.45 "Iowan Old Style", Palatino, Georgia, serif; color: var(--ink); background: var(--paper); }
+    main { max-width: 1080px; margin: 0 auto; padding: 20px 16px 72px; }
+    h1 { font-size: 1.7rem; margin: 0 0 8px; }
+    h2 { font-size: 1.35rem; }
     .note { color: #4d5968; max-width: 68ch; }
     .modes { display: flex; gap: 8px; margin: 22px 0; }
-    button, .file input { font: inherit; }
-    .modes button, .primary { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+    button, .file input, input, select, textarea { font: inherit; }
+    button, label.file {
+      min-height: 52px;
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 14px;
+      padding: 14px 18px;
+      cursor: pointer;
+    }
     .modes button.active { background: var(--accent); color: white; border-color: var(--accent); }
     .primary { background: var(--accent); color: white; border-color: var(--accent); }
     section { display: block; margin-top: 16px; background: white; border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
-    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 12px 0; }
-    label.file { display: inline-block; }
-    textarea { width: 100%; min-height: 72px; font: inherit; padding: 8px; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; margin: 12px 0; }
+    label.file { position: relative; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+    label.file input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+    textarea { width: 100%; min-height: 96px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+    input:not([type="radio"]), select { padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: white; }
+    .ruler { margin-top: 8px; }
+    .ruler summary { min-height: 52px; display: flex; align-items: center; cursor: pointer; font-size: 1.05rem; }
     table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
     th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
     .score { font-variant-numeric: tabular-nums; text-align: right; }
@@ -33,15 +52,14 @@
     .report h3 { margin: 18px 0 6px; font-size: 1.05rem; color: var(--accent); }
     .report p, .report li { max-width: 68ch; margin: 0 0 8px; }
     .report ul { margin: 0 0 8px; padding-left: 1.2rem; }
-    label.field { display: flex; flex-direction: column; gap: 4px; min-width: 12rem; }
-    label.field input, label.field select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+    label.field { display: flex; flex-direction: column; gap: 6px; min-width: 12rem; flex: 1; }
     .protocol-sheet { margin-top: 8px; }
     .protocol-sheet h2 { margin: 0 0 4px; font-size: 1.35rem; }
     .protocol-head p { margin: 0 0 2px; }
     @media print {
       body { background: white; }
-      main > h1, main > .note, #patient-card, #panel-image > h2, #panel-image > .note,
-      #panel-image .row, #panel-image label, #panel-image .stage, #strip-frames, #image-error,
+      main > h1, main > .note, #patient-card, #install-app, #install-hint, #panel-image > h2, #panel-image > .note,
+      #panel-image .row, #panel-image label, #dictate-context, #preview-box, .ruler, #strip-frames, #image-error,
       #interpretation, #protocol-actions, #share-actions, #protocol-status { display: none !important; }
       #panel-image { border: 0; padding: 0; }
       #protocol { display: block !important; }
@@ -50,17 +68,23 @@
     .strip-frames img { height: 92px; width: auto; border: 1px solid var(--line); background: white; }
     .strip-player { position: fixed; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
     .coming { background: #eef3f3; }
-    @media (max-width: 800px) { .stage { grid-template-columns: 1fr; } }
+    @media (max-width: 800px) {
+      .stage { grid-template-columns: 1fr; }
+      .row { flex-direction: column; }
+      button, label.file, label.field { width: 100%; }
+    }
   </style>
 </head>
 <body>
 <main>
   <h1>Doctor Opus ECG</h1>
-  <p class="note">Снимок или текст разбирают Gemini 3.8 Flash и Opus 5.5. Это поддержка решения, не диагноз.</p>
+  <p class="note">Поддержка решения, не диагноз.</p>
+  <button type="button" id="install-app">На экран</button>
+  <p id="install-hint" class="note" hidden></p>
 
   <section id="patient-card">
-    <h2>Шапка протокола</h2>
-    <p class="note">ФИО, возраст и пол остаются на этом компьютере и в модель не отправляются. Возраст считается из года рождения и даты снятия.</p>
+    <h2>Пациент</h2>
+    <p class="note">ФИО остаётся в телефоне и в разбор не уходит.</p>
     <div class="row">
       <label class="field">ФИО <input id="patient-name" type="text" autocomplete="name"></label>
       <label class="field">Год рождения <input id="patient-year" type="number" inputmode="numeric" min="1900" max="2100" step="1"></label>
@@ -77,43 +101,39 @@
 
   <section id="panel-image" class="active">
     <h2>ЭКГ</h2>
-    <p class="note">Можно приложить снимок, вставить текст или сделать и то и другое. JPEG, PNG, GIF и WEBP уходят как есть. Снимок айфона в HEIC страница сама переводит в JPEG перед отправкой. На сервере края не закрашиваются. PDF сюда не входит.</p>
+    <p class="note">Снимок или короткий ролик вдоль ленты.</p>
     <div class="row">
       <label class="file">Изображение <input id="image-file" type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.heic,.heif"></label>
       <label class="file">Видео ленты <input id="strip-video" type="file" accept="video/mp4,video/quicktime,video/webm,video/*"></label>
       <button class="primary" id="analyze-image" type="button">Разобрать</button>
     </div>
-    <p class="note">Второй способ: короткий ролик вдоль ленты. Телефон оставляет несколько кадров одной записи.</p>
     <div id="strip-frames" class="strip-frames" hidden></div>
     <video id="strip-player" class="strip-player" playsinline muted></video>
     <label>Текст: измерения, описание кривой, заключение аппарата<br><textarea id="notes"></textarea></label>
     <label>Клинический контекст без фамилии и контактов<br><textarea id="context"></textarea></label>
-    <div class="stage">
-      <div>
-        <div class="preview-wrap" id="preview-box" hidden>
-          <img id="preview" alt="Загруженная ЭКГ">
-          <svg id="caliper"></svg>
-          <div class="handle" id="handle-a"></div>
-          <div class="handle" id="handle-b"></div>
-        </div>
-      </div>
-      <div>
-        <h3>Линейка</h3>
-        <p class="note">Калибровка вручную: сколько пикселей в 1 мм сетки. Скорость меняет время, усиление меняет напряжение. Сетка сама не распознаётся.</p>
-        <label>Пикселей на 1 мм <input id="px-per-mm" type="number" min="0.1" step="0.1" value="4"></label>
-        <div class="row">
-          <label><input type="radio" name="speed" value="25" checked> 25 мм/с</label>
-          <label><input type="radio" name="speed" value="50"> 50 мм/с</label>
-        </div>
-        <label>Усиление, мм/мВ <input id="gain" type="number" min="1" step="1" value="10"></label>
-        <p id="caliper-readout">Интервал: — · Амплитуда: —</p>
-      </div>
+    <button type="button" id="dictate-context">Голосом</button>
+    <div class="preview-wrap" id="preview-box" hidden>
+      <img id="preview" alt="Загруженная ЭКГ">
+      <svg id="caliper"></svg>
+      <div class="handle" id="handle-a"></div>
+      <div class="handle" id="handle-b"></div>
     </div>
+    <details class="ruler">
+      <summary>Линейка</summary>
+      <label>Пикселей на 1 мм <input id="px-per-mm" type="number" min="0.1" step="0.1" value="4"></label>
+      <div class="row">
+        <label><input type="radio" name="speed" value="25" checked> 25 мм/с</label>
+        <label><input type="radio" name="speed" value="50"> 50 мм/с</label>
+      </div>
+      <label>Усиление, мм/мВ <input id="gain" type="number" min="1" step="1" value="10"></label>
+      <p id="caliper-readout">Интервал: — · Амплитуда: —</p>
+    </details>
     <p id="analyze-status" class="note"></p>
     <p id="image-error" class="error"></p>
     <article id="interpretation" class="report"></article>
     <div class="row" id="protocol-actions" hidden>
       <button class="primary" id="make-protocol" type="button">Сформировать протокол</button>
+      <button type="button" id="speak-conclusion">Прослушать</button>
     </div>
     <p id="protocol-status" class="note"></p>
     <article id="protocol" class="report protocol-sheet" hidden></article>
@@ -819,6 +839,91 @@ function renderReport(text, targetId = "interpretation", clear = true) {
     paragraph.textContent = item;
     root.appendChild(paragraph);
   });
+}
+
+const SpeechApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+let dictation = null;
+
+document.getElementById("dictate-context").onclick = () => {
+  const button = document.getElementById("dictate-context");
+  const field = document.getElementById("context");
+  if (!SpeechApi) {
+    field.focus();
+    document.getElementById("image-error").textContent = "На айфоне нажмите микрофон на клавиатуре.";
+    return;
+  }
+  if (dictation) {
+    dictation.stop();
+    return;
+  }
+  const recognition = new SpeechApi();
+  recognition.lang = "ru-RU";
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.onresult = (event) => {
+    let said = "";
+    for (let i = event.resultIndex; i < event.results.length; i += 1) {
+      if (event.results[i].isFinal) said += event.results[i][0].transcript;
+    }
+    said = said.trim();
+    if (!said) return;
+    const current = field.value.trim();
+    field.value = current ? current + " " + said : said;
+  };
+  recognition.onerror = () => {
+    dictation = null;
+    button.textContent = "Голосом";
+  };
+  recognition.onend = () => {
+    dictation = null;
+    button.textContent = "Голосом";
+  };
+  dictation = recognition;
+  button.textContent = "Слушаю";
+  recognition.start();
+};
+
+document.getElementById("speak-conclusion").onclick = () => {
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+  if (synth.speaking) {
+    synth.cancel();
+    return;
+  }
+  const protocol = document.getElementById("protocol");
+  const text = (protocol.hidden ? document.getElementById("interpretation").innerText : protocol.innerText).trim();
+  if (!text) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "ru-RU";
+  utterance.rate = 0.95;
+  const voice = synth.getVoices().find((item) => item.lang && item.lang.toLowerCase().startsWith("ru"));
+  if (voice) utterance.voice = voice;
+  synth.speak(utterance);
+};
+
+const installButton = document.getElementById("install-app");
+const installHint = document.getElementById("install-hint");
+let installPrompt = null;
+if (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone) {
+  installButton.hidden = true;
+}
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  installPrompt = event;
+});
+installButton.onclick = async () => {
+  if (installPrompt) {
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+    installHint.hidden = true;
+    return;
+  }
+  installHint.hidden = false;
+  installHint.textContent = "На айфоне: Поделиться, затем «На экран Домой».";
+};
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
 </script>

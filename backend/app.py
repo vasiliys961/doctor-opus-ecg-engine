@@ -166,6 +166,48 @@ def index():
     return FileResponse(FRONTEND, headers={"Cache-Control": "no-store"})
 
 
+PHONE_ASSETS = {
+    "manifest.webmanifest": "application/manifest+json",
+    "sw.js": "text/javascript",
+    "icon-192.png": "image/png",
+    "icon-512.png": "image/png",
+    "apple-touch-icon.png": "image/png",
+}
+
+
+def _phone_asset(name: str):
+    media = PHONE_ASSETS.get(name)
+    path = ROOT / "frontend" / name
+    if media is None or not path.is_file():
+        raise HTTPException(status_code=404, detail="Файл не найден.")
+    return FileResponse(path, media_type=media, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/manifest.webmanifest")
+def phone_manifest():
+    return _phone_asset("manifest.webmanifest")
+
+
+@app.get("/sw.js")
+def phone_worker():
+    return _phone_asset("sw.js")
+
+
+@app.get("/icon-192.png")
+def phone_icon():
+    return _phone_asset("icon-192.png")
+
+
+@app.get("/icon-512.png")
+def phone_icon_large():
+    return _phone_asset("icon-512.png")
+
+
+@app.get("/apple-touch-icon.png")
+def phone_apple_icon():
+    return _phone_asset("apple-touch-icon.png")
+
+
 @app.get("/cable.js")
 def cable_script():
     if not CABLE.is_file():
