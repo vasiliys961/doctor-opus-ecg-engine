@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f6e6e">
+  <meta name="theme-color" content="#143d32">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -12,34 +12,85 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <title>Doctor Opus ECG Engine</title>
   <style>
-    :root { color-scheme: light; --ink: #1c2430; --line: #d5dbe3; --paper: #f4f7f8; --accent: #0f6e6e; }
+    :root {
+      color-scheme: light;
+      --ink: #17352c;
+      --muted: #4e6b60;
+      --line: #b7dcc8;
+      --page: #e4f2ea;
+      --card: #f7fbf8;
+      --field: #f3faf6;
+      --sage: #d7efe3;
+      --forest: #143d32;
+      --forest-press: #0b241c;
+      --on-forest: #f4fff8;
+    }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
-    body { margin: 0; font: 19px/1.45 "Iowan Old Style", Palatino, Georgia, serif; color: var(--ink); background: var(--paper); }
-    main { max-width: 1080px; margin: 0 auto; padding: 20px 16px 72px; }
-    h1 { font-size: 1.7rem; margin: 0 0 8px; }
-    h2 { font-size: 1.35rem; }
-    .note { color: #4d5968; max-width: 68ch; }
-    .modes { display: flex; gap: 8px; margin: 22px 0; }
+    body { margin: 0; font: 19px/1.45 "Iowan Old Style", Palatino, Georgia, serif; color: var(--ink); background: var(--page); }
+    main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 72px; }
+    h1 { font-size: 1.85rem; margin: 0; color: var(--on-forest); }
+    h2 { font-size: 1.35rem; margin: 0 0 6px; color: var(--forest); }
+    .note { color: var(--muted); max-width: 68ch; margin: 6px 0 0; }
+    .mast {
+      display: flex; flex-direction: column; gap: 14px;
+      margin-bottom: 20px; padding: 22px 22px 18px;
+      border-radius: 24px; background: var(--forest);
+      box-shadow: 0 12px 28px rgba(20, 61, 50, 0.16);
+    }
+    .mast .note { color: var(--sage); }
+    .workspace { display: grid; gap: 16px; }
     button, .file input, input, select, textarea { font: inherit; }
     button, label.file {
       min-height: 52px;
       border: 1px solid var(--line);
-      background: white;
+      background: var(--sage);
+      color: var(--forest);
       border-radius: 14px;
       padding: 14px 18px;
       cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
     }
-    .modes button.active { background: var(--accent); color: white; border-color: var(--accent); }
-    .primary { background: var(--accent); color: white; border-color: var(--accent); }
-    section { display: block; margin-top: 16px; background: white; border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+    button:hover, label.file:hover { background: #c9e8d8; }
+    button:active, label.file:active {
+      background: var(--forest);
+      color: var(--on-forest);
+      border-color: var(--forest);
+      transform: translateY(1px);
+    }
+    button:disabled { opacity: 0.55; cursor: wait; transform: none; }
+    .primary {
+      background: var(--forest);
+      color: var(--on-forest);
+      border-color: var(--forest);
+      box-shadow: 0 8px 18px rgba(20, 61, 50, 0.18);
+    }
+    .primary:hover { background: #1b5243; }
+    .primary:active { background: var(--forest-press); border-color: var(--forest-press); }
+    .mast #install-app {
+      background: var(--sage);
+      color: var(--forest);
+      border-color: var(--sage);
+      box-shadow: none;
+    }
+    .mast #install-app:hover { background: #f4fff8; }
+    .mast #install-app:active { background: var(--on-forest); color: var(--forest-press); }
+    section { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 18px 16px 20px; }
     .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; margin: 12px 0; }
     label.file { position: relative; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
     label.file input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-    textarea { width: 100%; min-height: 96px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
-    input:not([type="radio"]), select { padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: white; }
-    .ruler { margin-top: 8px; }
-    .ruler summary { min-height: 52px; display: flex; align-items: center; cursor: pointer; font-size: 1.05rem; }
+    textarea, input:not([type="radio"]), select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--field);
+      color: var(--ink);
+    }
+    textarea { min-height: 96px; }
+    textarea:focus, input:focus, select:focus { outline: 3px solid #8fceb0; border-color: var(--forest); }
+    .ruler { margin-top: 8px; border: 1px solid var(--line); border-radius: 16px; background: var(--field); padding: 0 14px 8px; }
+    .ruler summary { min-height: 52px; display: flex; align-items: center; cursor: pointer; color: var(--forest); }
     table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
     th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
     .score { font-variant-numeric: tabular-nums; text-align: right; }
@@ -47,9 +98,9 @@
     .preview-wrap { position: relative; overflow: auto; border: 1px solid var(--line); background: #fff; }
     .preview-wrap img { display: block; max-width: 100%; }
     .preview-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .handle { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #0f6e6e; border: 2px solid white; cursor: grab; }
+    .handle { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--forest); border: 2px solid white; cursor: grab; }
     .error { color: #8d1d1d; }
-    .report h3 { margin: 18px 0 6px; font-size: 1.05rem; color: var(--accent); }
+    .report h3 { margin: 18px 0 6px; font-size: 1.05rem; color: var(--forest); }
     .report p, .report li { max-width: 68ch; margin: 0 0 8px; }
     .report ul { margin: 0 0 8px; padding-left: 1.2rem; }
     label.field { display: flex; flex-direction: column; gap: 6px; min-width: 12rem; flex: 1; }
@@ -58,30 +109,42 @@
     .protocol-head p { margin: 0 0 2px; }
     @media print {
       body { background: white; }
-      main > h1, main > .note, #patient-card, #install-app, #install-hint, #panel-image > h2, #panel-image > .note,
+      .mast, #patient-card, #install-hint, #panel-image > h2, #panel-image > .note,
       #panel-image .row, #panel-image label, #dictate-context, #preview-box, .ruler, #strip-frames, #image-error,
       #interpretation, #protocol-actions, #share-actions, #protocol-status { display: none !important; }
       #panel-image { border: 0; padding: 0; }
       #protocol { display: block !important; }
     }
     .strip-frames { display: flex; gap: 8px; overflow-x: auto; margin: 8px 0 12px; }
-    .strip-frames img { height: 92px; width: auto; border: 1px solid var(--line); background: white; }
+    .strip-frames img { height: 92px; width: auto; border: 1px solid var(--line); border-radius: 12px; background: white; }
     .strip-player { position: fixed; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
-    .coming { background: #eef3f3; }
-    @media (max-width: 800px) {
+    @media (max-width: 879px) {
       .stage { grid-template-columns: 1fr; }
       .row { flex-direction: column; }
       button, label.file, label.field { width: 100%; }
+    }
+    @media (min-width: 880px) {
+      .mast { flex-direction: row; align-items: center; justify-content: space-between; padding: 22px 28px; }
+      .mast #install-app { width: auto; flex: 0 0 auto; }
+      .workspace { grid-template-columns: minmax(320px, 0.92fr) minmax(380px, 1.08fr); gap: 20px; align-items: start; }
+      #patient-card .row { display: grid; grid-template-columns: 1fr 1fr; }
+      #sources { display: grid; grid-template-columns: 1fr 1fr; }
+      #analyze-image { grid-column: 1 / -1; }
+      #dictate-context, #share-actions button { width: auto; }
     }
   </style>
 </head>
 <body>
 <main>
-  <h1>Doctor Opus ECG</h1>
-  <p class="note">Поддержка решения, не диагноз.</p>
-  <button type="button" id="install-app">На экран</button>
+  <header class="mast">
+    <div>
+      <h1>Doctor Opus ECG</h1>
+      <p class="note">Поддержка решения, не диагноз.</p>
+    </div>
+    <button type="button" id="install-app">На экран</button>
+  </header>
   <p id="install-hint" class="note" hidden></p>
-
+  <div class="workspace">
   <section id="patient-card">
     <h2>Пациент</h2>
     <p class="note">ФИО остаётся в телефоне и в разбор не уходит.</p>
@@ -102,7 +165,7 @@
   <section id="panel-image" class="active">
     <h2>ЭКГ</h2>
     <p class="note">Снимок или короткий ролик вдоль ленты.</p>
-    <div class="row">
+    <div class="row" id="sources">
       <label class="file">Изображение <input id="image-file" type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.heic,.heif"></label>
       <label class="file">Видео ленты <input id="strip-video" type="file" accept="video/mp4,video/quicktime,video/webm,video/*"></label>
       <button class="primary" id="analyze-image" type="button">Разобрать</button>
@@ -142,6 +205,7 @@
       <button id="share-protocol" type="button">На компьютер</button>
     </div>
   </section>
+  </div>
 </main>
 <script>
 const preview = document.getElementById("preview");
@@ -160,7 +224,7 @@ function placeHandles() {
   handleA.style.top = points[0].y + "px";
   handleB.style.left = points[1].x + "px";
   handleB.style.top = points[1].y + "px";
-  svg.innerHTML = `<line x1="${points[0].x}" y1="${points[0].y}" x2="${points[1].x}" y2="${points[1].y}" stroke="#0f6e6e" stroke-width="2"/>`;
+  svg.innerHTML = `<line x1="${points[0].x}" y1="${points[0].y}" x2="${points[1].x}" y2="${points[1].y}" stroke="#143d32" stroke-width="2"/>`;
   const pxPerMm = Number(document.getElementById("px-per-mm").value);
   const speed = Number(document.querySelector("input[name=speed]:checked").value);
   const gain = Number(document.getElementById("gain").value);
