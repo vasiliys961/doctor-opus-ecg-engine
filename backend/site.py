@@ -33,20 +33,32 @@ def index():
     return FileResponse(FRONTEND, headers={"Cache-Control": "no-store"})
 
 
+async def _strip_frames(frames: list[UploadFile] | None) -> list[tuple[bytes, str, str]]:
+    images: list[tuple[bytes, str, str]] = []
+    for item in frames or []:
+        payload = await item.read()
+        if payload:
+            images.append((payload, item.filename or "", item.content_type or ""))
+    return images
+
+
 @app.post("/api/ecg/analyze")
 async def analyze(
     file: UploadFile | None = File(None),
+    frames: list[UploadFile] | None = File(None),
     notes: str = Form(""),
     clinical_context: str = Form(""),
 ):
-    payload = await file.read() if file is not None else None
-    if payload == b"":
-        payload = None
+    images = await _strip_frames(frames)
+    payload = None
+    if not images and file is not None:
+        payload = await file.read() or None
     try:
         return analyze_case(
             image=payload,
             filename=file.filename if file is not None else "",
             mime_type=file.content_type if file is not None else "",
+            images=images or None,
             notes=notes,
             clinical_context=clinical_context,
         )

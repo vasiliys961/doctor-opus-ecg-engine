@@ -290,19 +290,33 @@ Return JSON only:
 """
 
 
-def _eyes_content(image_url: str | None, notes: str) -> list | str:
-    if image_url:
+STRIP_EYES_NOTE = (
+    "These pictures are ordered frames of one paper ECG strip. "
+    "The camera moved along the paper. Neighbouring frames overlap. "
+    "Read them as one recording. "
+    "Do not treat the frames as separate patients or separate ECGs. "
+    "The time between frames is camera time, not ECG time. "
+    "Do not invent a measurement that is readable on none of the frames."
+)
+
+MAX_STRIP_FRAMES = 6
+MAX_FRAME_BYTES = 1_500_000
+
+
+def _eyes_content(image_urls: list[str], notes: str) -> list | str:
+    if image_urls:
         text = OBSERVER_PROMPT
+        if len(image_urls) > 1:
+            text = f"{STRIP_EYES_NOTE}\n\n{text}"
         if notes:
             text += (
                 "\n\nSUPPLIED TEXT is not the picture. "
                 "Do not copy it into measurements unless the same value is visible on the image.\n"
                 f"SUPPLIED TEXT:\n{notes}"
             )
-        return [
-            {"type": "text", "text": text},
-            {"type": "image_url", "image_url": {"url": image_url}},
-        ]
+        content: list = [{"type": "text", "text": text}]
+        content.extend({"type": "image_url", "image_url": {"url": url}} for url in image_urls)
+        return content
     return f"{TEXT_EYES_PROMPT}\n\nNOTE:\n{notes}"
 
 
@@ -325,27 +339,38 @@ def analyze_case(
     image: bytes | None = None,
     filename: str = "",
     mime_type: str = "",
+    images: list[tuple[bytes, str, str]] | None = None,
     notes: str = "",
     clinical_context: str = "",
 ) -> dict:
     """Глаза — Gemini, анализатор — Opus. Ансамбль 531 не вызывается."""
     supplied = notes.strip()
     context = clinical_context.strip()
-    image_url = None
-    image_preserved = False
-    if image:
-        raw, mime = prepare_image(image, filename, mime_type)
-        image_url = f"data:{mime};base64,{base64.b64encode(raw).decode('ascii')}"
-        image_preserved = True
-    if image_url is None and not supplied:
+    payloads = [(payload, name, mime) for payload, name, mime in (images or []) if payload]
+    if not payloads and image:
+        payloads = [(image, filename, mime_type)]
+    if len(payloads) > MAX_STRIP_FRAMES:
+        raise UnsupportedImage("Для ленты нужно не больше шести кадров.")
+    image_urls: list[str] = []
+    for payload, name, mime in payloads:
+        raw, ready = prepare_image(payload, name, mime)
+        if len(raw) > MAX_FRAME_BYTES:
+            raise UnsupportedImage("Кадр ленты слишком большой.")
+        image_urls.append(f"data:{ready};base64,{base64.b64encode(raw).decode('ascii')}")
+    image_preserved = bool(image_urls)
+    if not image_urls and not supplied:
         raise EmptyCase("Нужно изображение ЭКГ или текст: измерения, описание, заключение аппарата.")
-    if image_url and supplied:
+    if len(image_urls) > 1 and supplied:
+        kind = "strip+text"
+    elif len(image_urls) > 1:
+        kind = "strip"
+    elif image_urls and supplied:
         kind = "image+text"
-    elif image_url:
+    elif image_urls:
         kind = "image"
     else:
         kind = "text"
-    observer_text = _completion(EYES_MODEL, _eyes_content(image_url, supplied))
+    observer_text = _completion(EYES_MODEL, _eyes_content(image_urls, supplied))
     extraction, parse_warning = _parse_json(observer_text)
     interpretation = _completion(ANALYZER_MODEL, _analyzer_input(observer_text, supplied, context))
     return {
