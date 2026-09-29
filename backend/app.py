@@ -27,6 +27,8 @@ from ecg_engine.raw_extractor import RawECGExtractor
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "frontend" / "index.html"
+CABLE = ROOT / "frontend" / "cable.js"
+CONNECT_GUIDE = ROOT / "frontend" / "ecg-connect.html"
 EXAMPLE_CSV = ROOT / "examples2" / "00001_норма.csv"
 
 app = FastAPI(title="Doctor Opus ECG Engine", version="0.2.0")
@@ -162,6 +164,20 @@ def signal_conclusion(body: SignalConclusionBody):
 @app.get("/")
 def index():
     return FileResponse(FRONTEND, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/cable.js")
+def cable_script():
+    if not CABLE.is_file():
+        raise HTTPException(status_code=404, detail="Скрипт кабеля не найден.")
+    return FileResponse(CABLE, media_type="application/javascript", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/ecg-connect.html")
+def connect_guide():
+    if not CONNECT_GUIDE.is_file():
+        raise HTTPException(status_code=404, detail="Инструкция по подключению не найдена.")
+    return FileResponse(CONNECT_GUIDE, media_type="text/html", headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/ecg/analyze")
