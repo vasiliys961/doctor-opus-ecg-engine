@@ -1,6 +1,6 @@
 {
-  "name": "Doctor Opus ECG",
-  "short_name": "ЭКГ",
+  "name": "ECG Opus",
+  "short_name": "ECG Opus",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
