@@ -301,6 +301,7 @@ STRIP_EYES_NOTE = (
 
 MAX_STRIP_FRAMES = 6
 MAX_FRAME_BYTES = 1_500_000
+MAX_PHOTO_BYTES = 4_000_000
 
 
 def _eyes_content(image_urls: list[str], notes: str) -> list | str:
@@ -354,8 +355,11 @@ def analyze_case(
     image_urls: list[str] = []
     for payload, name, mime in payloads:
         raw, ready = prepare_image(payload, name, mime)
-        if len(raw) > MAX_FRAME_BYTES:
-            raise UnsupportedImage("Кадр ленты слишком большой.")
+        limit = MAX_PHOTO_BYTES if len(payloads) == 1 else MAX_FRAME_BYTES
+        if len(raw) > limit:
+            raise UnsupportedImage(
+                "Снимок слишком большой." if len(payloads) == 1 else "Кадр ленты слишком большой."
+            )
         image_urls.append(f"data:{ready};base64,{base64.b64encode(raw).decode('ascii')}")
     image_preserved = bool(image_urls)
     if not image_urls and not supplied:

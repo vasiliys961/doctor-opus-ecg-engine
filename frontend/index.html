@@ -304,10 +304,43 @@ function openImage(file) {
   });
 }
 
+const PHOTO_BYTES = 3200000;
+
+function fittedJpeg(source, name, quality, maxEdge) {
+  const longest = Math.max(source.width, source.height);
+  const scale = longest > maxEdge ? maxEdge / longest : 1;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(source.width * scale));
+  canvas.height = Math.max(1, Math.round(source.height * scale));
+  canvas.getContext("2d").drawImage(source, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("jpeg"));
+        return;
+      }
+      const stem = (name || "ecg").replace(/\.[^.]+$/, "") || "ecg";
+      resolve(new File([blob], stem + ".jpg", { type: "image/jpeg" }));
+    }, "image/jpeg", quality);
+  });
+}
+
+async function shrinkPhoto(file) {
+  const image = await openImage(file);
+  let quality = 0.86;
+  let fitted = await fittedJpeg(image, file.name, quality, 2400);
+  while (fitted.size > PHOTO_BYTES && quality > 0.52) {
+    quality -= 0.1;
+    fitted = await fittedJpeg(image, file.name, quality, 2400);
+  }
+  return fitted;
+}
+
 async function imageForReview(file) {
   const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-  if (readyImageBytes(bytes)) return file;
-  return jpegFile(await openImage(file), file.name);
+  const ready = readyImageBytes(bytes) ? file : await jpegFile(await openImage(file), file.name);
+  if (ready.size <= PHOTO_BYTES) return ready;
+  return shrinkPhoto(ready);
 }
 
 let reviewImage = null;
@@ -987,11 +1020,16 @@ window.addEventListener("beforeinstallprompt", (event) => {
 });
 installButton.onclick = async () => {
   if (installPrompt) {
-    installPrompt.prompt();
-    await installPrompt.userChoice;
+    const prompt = installPrompt;
     installPrompt = null;
-    installHint.hidden = true;
-    return;
+    try {
+      await prompt.prompt();
+      await prompt.userChoice;
+      installHint.hidden = true;
+      return;
+    } catch (_) {
+      installPrompt = prompt;
+    }
   }
   installHint.hidden = false;
   installHint.textContent = homeScreenHint();
@@ -1000,14 +1038,18 @@ installButton.onclick = async () => {
 function homeScreenHint() {
   const ua = navigator.userAgent || "";
   const ios = /iPhone|iPad|iPod/.test(ua);
+  const android = /Android/.test(ua);
   const notSafari = /CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser|Instagram|FBAN|FBAV|Telegram/.test(ua);
+  if (android) {
+    return "В Chrome нажмите ⋮ справа вверху и выберите «Установить приложение» или «Добавить на главный экран».";
+  }
   if (ios && notSafari) {
     return "Сейчас это не Safari. Откройте адрес в Safari, синий компас. Внизу нажмите квадрат со стрелкой. Если его нет — ••• справа внизу, затем «Поделиться», и ниже списка пролистайте до «На экран Домой».";
   }
   if (ios) {
     return "Кнопки на странице нет. Внизу Safari нажмите квадрат со стрелкой вверх. Если его нет — ••• справа внизу, затем «Поделиться». «На экран Домой» ниже AirDrop: пролистайте или нажмите стрелку вниз. Нет пункта — внизу «Править действия».";
   }
-  return "Откройте меню браузера и выберите «На экран Домой» или «Установить».";
+  return "Откройте меню браузера и выберите «Установить» или «Добавить на главный экран».";
 }
 
 if ("serviceWorker" in navigator) {
