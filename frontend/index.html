@@ -994,8 +994,22 @@ installButton.onclick = async () => {
     return;
   }
   installHint.hidden = false;
-  installHint.textContent = "На айфоне: Поделиться, затем «На экран Домой».";
+  installHint.textContent = homeScreenHint();
 };
+
+function homeScreenHint() {
+  const ua = navigator.userAgent || "";
+  const ios = /iPhone|iPad|iPod/.test(ua);
+  const notSafari = /CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser|Instagram|FBAN|FBAV|Telegram/.test(ua);
+  if (ios && notSafari) {
+    return "Сейчас страница открыта не в Safari. VPN можно не выключать: скопируйте адрес и откройте его в Safari, синий компас. Затем ••• справа от адреса → Поделиться → пролистайте вниз до «На экран Домой».";
+  }
+  if (ios) {
+    return "Кнопки нет на странице, VPN её не прячет. В Safari нажмите ••• справа от адреса → Поделиться и пролистайте список вниз до «На экран Домой». В верхнем ряду его нет. Если пункта нет совсем — внизу листа «Править действия».";
+  }
+  return "Откройте меню браузера и выберите «На экран Домой» или «Установить».";
+}
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
