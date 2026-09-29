@@ -79,10 +79,10 @@ def test_page_keeps_the_cable_closed_until_a_model_is_named():
         cable = client.get("/cable.js")
         guide = client.get("/ecg-connect.html")
     assert page.status_code == 200
-    assert 'id="score-cable"' in page.text
-    assert "Подключить" in page.text
-    assert "Инструкция по подключению ЭКГ" in page.text
-    assert 'src="/cable.js"' in page.text
+    assert 'id="score-cable"' not in page.text
+    assert 'id="panel-signal"' not in page.text
+    assert 'src="/cable.js"' not in page.text
+    assert "Разобрать" in page.text
     assert guide.status_code == 200
     assert "Аппарат по кабелю" in guide.text
     assert "cu.Bluetooth-Incoming-Port" in guide.text

@@ -38,22 +38,9 @@
     .protocol-sheet { margin-top: 8px; }
     .protocol-sheet h2 { margin: 0 0 4px; font-size: 1.35rem; }
     .protocol-head p { margin: 0 0 2px; }
-    #signal-trace { width: 100%; height: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
-    button.guide { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 8px 14px; cursor: pointer; }
-    .connect-guide { margin: 4px 0 14px; padding: 4px 2px 2px; }
-    .connect-guide h2 { margin: 0 0 8px; font-size: 1.25rem; }
-    .connect-guide h3 { margin: 18px 0 6px; font-size: 1.05rem; color: var(--accent); }
-    .connect-guide p, .connect-guide li { max-width: 68ch; }
-    .choice { margin: 14px 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcfd; }
-    .choice h3 { margin: 0 0 6px; font-size: 1.05rem; }
-    .choice ol { margin: 8px 0 12px; padding-left: 1.3rem; }
-    .choice li { max-width: 68ch; }
-    .beta-panel { position: relative; }
-    .beta-mark { margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: #fff6d8; border: 1px solid #e4d39a; font-weight: 600; }
-    .beta-veil { filter: blur(5px); opacity: 0.55; pointer-events: none; user-select: none; }
     @media print {
       body { background: white; }
-      main > h1, main > .note, #patient-card, #panel-signal, #panel-image > h2, #panel-image > .note,
+      main > h1, main > .note, #patient-card, #panel-image > h2, #panel-image > .note,
       #panel-image .row, #panel-image label, #panel-image .stage, #image-error,
       #interpretation, #protocol-actions, #share-actions, #protocol-status { display: none !important; }
       #panel-image { border: 0; padding: 0; }
@@ -66,7 +53,7 @@
 <body>
 <main>
   <h1>Doctor Opus ECG</h1>
-  <p class="note">Снимок или текст разбирают Gemini 3.8 Flash и Opus 5.5. Цифровая запись с аппарата помечена как бета и на экране закрыта. Это поддержка решения, не диагноз.</p>
+  <p class="note">Снимок или текст разбирают Gemini 3.8 Flash и Opus 5.5. Это поддержка решения, не диагноз.</p>
 
   <section id="patient-card">
     <h2>Шапка протокола</h2>
@@ -129,61 +116,7 @@
       <button id="share-protocol" type="button">Поделиться</button>
     </div>
   </section>
-
-  <section id="panel-signal" class="beta-panel">
-    <p class="beta-mark">Бета. С аппарата файл CSV и кабель пока не снимают запись.</p>
-    <div class="beta-veil" inert>
-    <h2>Цифровая ЭКГ</h2>
-    <div class="choice">
-      <h3>1. Анализ готового файла CSV с внешнего устройства</h3>
-      <p>Аппарат уже сохранил запись. Выберите файл и нажмите зелёную кнопку.</p>
-      <div class="row">
-        <label class="file">Файл <input id="signal-file" type="file" accept=".csv,text/csv"></label>
-        <label>Частота, Гц <input id="signal-fs" type="number" min="1" step="1" value="500"></label>
-        <button class="primary" id="score-signal" type="button">Начать обработку</button>
-        <button id="score-example" type="button">Пример записи</button>
-      </div>
-    </div>
-    <div class="choice">
-      <h3>2. Подключить аппарат ЭКГ</h3>
-      <ol>
-        <li>Вставьте кабель аппарата в компьютер.</li>
-        <li>Нажмите «Подключить».</li>
-        <li>В окне выберите строку, которой не было до кабеля.</li>
-        <li>Нажмите «Подключение».</li>
-      </ol>
-      <button id="score-cable" type="button">Подключить</button>
-      <p id="cable-note" class="note"></p>
-    </div>
-    <p id="signal-error" class="error"></p>
-    <p id="signal-status" class="note"></p>
-    <h3 id="trace-title" hidden>Кривая</h3>
-    <canvas id="signal-trace" hidden></canvas>
-    <p id="trace-note" class="note" hidden>Сетка условная. Это не калибр 25 мм/с.</p>
-    <h3 id="measure-title" hidden>Разметка</h3>
-    <p id="measure-description"></p>
-    <table id="measure-table" hidden>
-      <thead><tr><th>Параметр</th><th>Значение</th></tr></thead>
-      <tbody id="signal-measures"></tbody>
-    </table>
-    <div class="row">
-      <button class="primary" id="signal-conclude" type="button" hidden>Сформировать заключение</button>
-    </div>
-    <p id="signal-conclusion-status" class="note"></p>
-    <article id="signal-conclusion" class="report protocol-sheet" hidden></article>
-    <div class="row" id="signal-share-actions" hidden>
-      <button id="download-signal-protocol" type="button">Скачать Word</button>
-      <button id="share-signal-protocol" type="button">Поделиться</button>
-    </div>
-    <div class="row">
-      <button id="connect-guide-toggle" class="guide" type="button" aria-expanded="false" aria-controls="connect-guide">Инструкция по подключению ЭКГ</button>
-    </div>
-    <article id="connect-guide" class="connect-guide" hidden></article>
-    </div>
-  </section>
-  </section>
 </main>
-<script src="/cable.js"></script>
 <script>
 const preview = document.getElementById("preview");
 const box = document.getElementById("preview-box");
@@ -544,10 +477,8 @@ function fillProtocolHead(root) {
 
 ["patient-name", "patient-year", "patient-date", "patient-sex"].forEach((id) => {
   document.getElementById(id).addEventListener("input", () => {
-    ["protocol", "signal-conclusion"].forEach((targetId) => {
-      const root = document.getElementById(targetId);
-      if (!root.hidden && root.querySelector(".protocol-head")) fillProtocolHead(root);
-    });
+    const root = document.getElementById("protocol");
+    if (!root.hidden && root.querySelector(".protocol-head")) fillProtocolHead(root);
   });
 });
 
@@ -601,262 +532,7 @@ function renderReport(text, targetId = "interpretation", clear = true) {
   });
 }
 
-let digitalReading = null;
-let signalProtocolText = "";
-
-function drawTrace(trace) {
-  const canvas = document.getElementById("signal-trace");
-  const title = document.getElementById("trace-title");
-  const note = document.getElementById("trace-note");
-  if (!trace || !trace.length) {
-    canvas.hidden = true;
-    title.hidden = true;
-    note.hidden = true;
-    return;
-  }
-  const cssWidth = Math.max(640, canvas.parentElement.clientWidth - 4);
-  const rowHeight = 46;
-  const cssHeight = trace.length * rowHeight + 8;
-  const scale = window.devicePixelRatio || 1;
-  canvas.width = Math.round(cssWidth * scale);
-  canvas.height = Math.round(cssHeight * scale);
-  canvas.style.width = `${cssWidth}px`;
-  canvas.style.height = `${cssHeight}px`;
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  ctx.fillStyle = "#fffdf8";
-  ctx.fillRect(0, 0, cssWidth, cssHeight);
-  ctx.strokeStyle = "#f3c7c7";
-  ctx.lineWidth = 1;
-  for (let x = 0; x <= cssWidth; x += 20) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, cssHeight);
-    ctx.stroke();
-  }
-  for (let y = 0; y <= cssHeight; y += 20) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(cssWidth, y);
-    ctx.stroke();
-  }
-  const labelWidth = 36;
-  trace.forEach((lead, index) => {
-    const samples = lead.samples || [];
-    const mid = index * rowHeight + rowHeight / 2 + 4;
-    let peak = 0.2;
-    samples.forEach((value) => { peak = Math.max(peak, Math.abs(Number(value) || 0)); });
-    const gain = (rowHeight * 0.4) / peak;
-    ctx.fillStyle = "#1c2430";
-    ctx.font = "12px sans-serif";
-    ctx.fillText(lead.lead || "", 4, mid + 4);
-    ctx.beginPath();
-    ctx.strokeStyle = "#143d4a";
-    ctx.lineWidth = 1.15;
-    samples.forEach((value, sampleIndex) => {
-      const x = labelWidth + (sampleIndex / Math.max(samples.length - 1, 1)) * (cssWidth - labelWidth - 8);
-      const y = mid - Number(value) * gain;
-      if (sampleIndex === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-  });
-  canvas.hidden = false;
-  title.hidden = false;
-  note.hidden = false;
-}
-
-async function scoreDigital(load) {
-  const error = document.getElementById("signal-error");
-  const status = document.getElementById("signal-status");
-  const measureBody = document.getElementById("signal-measures");
-  const measureTable = document.getElementById("measure-table");
-  const measureTitle = document.getElementById("measure-title");
-  const measureDescription = document.getElementById("measure-description");
-  const button = document.getElementById("score-signal");
-  const conclude = document.getElementById("signal-conclude");
-  const conclusion = document.getElementById("signal-conclusion");
-  const conclusionStatus = document.getElementById("signal-conclusion-status");
-  error.textContent = "";
-  status.textContent = "";
-  measureDescription.textContent = "";
-  conclusionStatus.textContent = "";
-  conclusion.hidden = true;
-  conclusion.replaceChildren();
-  document.getElementById("signal-share-actions").hidden = true;
-  signalProtocolText = "";
-  conclude.hidden = true;
-  digitalReading = null;
-  measureBody.replaceChildren();
-  measureTable.hidden = true;
-  measureTitle.hidden = true;
-  document.getElementById("signal-trace").hidden = true;
-  document.getElementById("trace-title").hidden = true;
-  document.getElementById("trace-note").hidden = true;
-  button.disabled = true;
-  document.getElementById("score-example").disabled = true;
-  document.getElementById("score-cable").disabled = true;
-  status.textContent = "Считаю кривую и разметку.";
-  try {
-    const response = await load();
-    const payload = await response.json();
-    if (!response.ok) {
-      error.textContent = payload.detail || "Запись не посчиталась.";
-      return;
-    }
-    const measurements = payload.measurements || {};
-    drawTrace(payload.trace || []);
-    const shownLines = new Set(["Ритм", "ЧСС", "Электрическая ось сердца", "Зубец P", "Интервал PQ", "Комплекс QRS", "Сегмент ST", "Зубец T", "Интервал QT", "Внеочередные комплексы"]);
-    (measurements.lines || []).filter((item) => shownLines.has(item.name)).forEach((item) => {
-      const tr = document.createElement("tr");
-      const name = document.createElement("td");
-      const value = document.createElement("td");
-      name.textContent = item.name;
-      value.textContent = item.value;
-      tr.append(name, value);
-      measureBody.appendChild(tr);
-    });
-    if (measureBody.children.length) {
-      measureTitle.hidden = false;
-      measureTable.hidden = false;
-    }
-    if (measurements.available && payload.scores && payload.scores.length) {
-      digitalReading = { measurements, scores: payload.scores };
-      conclude.hidden = false;
-    }
-  } catch (requestError) {
-    error.textContent = "Запись не посчиталась. Нажмите кнопку ещё раз.";
-  } finally {
-    button.disabled = false;
-    document.getElementById("score-example").disabled = false;
-    document.getElementById("score-cable").disabled = false;
-    status.textContent = "";
-  }
-}
-
-function postSelectedCsv() {
-  const file = document.getElementById("signal-file").files[0];
-  if (!file) {
-    document.getElementById("signal-error").textContent = "Сначала выберите файл.";
-    return;
-  }
-  const form = new FormData();
-  form.append("file", file);
-  form.append("sampling_rate", document.getElementById("signal-fs").value);
-  scoreDigital(() => fetch("/api/ecg/signal/csv", { method: "POST", body: form }));
-}
-
-document.getElementById("score-signal").onclick = () => postSelectedCsv();
-
-document.getElementById("score-cable").onclick = async () => {
-  const error = document.getElementById("signal-error");
-  const note = document.getElementById("cable-note");
-  error.textContent = "";
-  if (!window.cable || !window.cable.serialAvailable()) {
-    note.textContent = "Кабель открывается в Chrome или Edge на компьютере. Здесь выберите файл и нажмите «Начать обработку».";
-    return;
-  }
-  const taught = window.cable.profileNames();
-  if (taught.length === 1) {
-    try {
-      const recording = await window.cable.captureCableRecording(taught[0]);
-      const csv = window.cable.samplesToCsv(recording.columns);
-      const form = new FormData();
-      form.append("file", new Blob([csv], { type: "text/csv" }), "cable.csv");
-      form.append("sampling_rate", String(recording.samplingRate));
-      document.getElementById("signal-fs").value = String(recording.samplingRate);
-      await scoreDigital(() => fetch("/api/ecg/signal/csv", { method: "POST", body: form }));
-    } catch (captureError) {
-      if (captureError && captureError.name === "NotFoundError") {
-        note.textContent = "Окно закрыто. Вставьте кабель и нажмите «Подключить» снова.";
-        return;
-      }
-      error.textContent = (captureError && captureError.message) || "Запись с кабеля не собралась.";
-    }
-    return;
-  }
-  note.textContent = "В окне выберите строку, которой не было до кабеля. Затем нажмите «Подключение».";
-  try {
-    await navigator.serial.requestPort();
-    note.textContent = "Строка выбрана. Кривая с кабеля пока не строится. Если запись сохранена файлом, нажмите «Начать обработку».";
-  } catch (portError) {
-    if (portError && portError.name === "NotFoundError") {
-      note.textContent = "Окно закрыто. Вставьте кабель и нажмите «Подключить» снова.";
-      return;
-    }
-    error.textContent = "Окно со списком не открылось.";
-  }
-};
-
-document.getElementById("connect-guide-toggle").onclick = async () => {
-  const guide = document.getElementById("connect-guide");
-  const button = document.getElementById("connect-guide-toggle");
-  const willOpen = guide.hidden;
-  if (willOpen) {
-    try {
-      const response = await fetch("/ecg-connect.html", { cache: "no-store" });
-      if (!response.ok) throw new Error("missing");
-      guide.innerHTML = await response.text();
-    } catch (loadError) {
-      guide.textContent = "Инструкция не открылась. Нажмите кнопку ещё раз.";
-    }
-  }
-  guide.hidden = !willOpen;
-  button.setAttribute("aria-expanded", willOpen ? "true" : "false");
-};
-
-document.getElementById("score-example").onclick = () => {
-  document.getElementById("panel-signal").scrollIntoView({ behavior: "smooth", block: "start" });
-  scoreDigital(() => fetch("/api/ecg/signal/example", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sampling_rate: Number(document.getElementById("signal-fs").value) }),
-  }));
-};
-
-document.getElementById("signal-conclude").onclick = async () => {
-  const status = document.getElementById("signal-conclusion-status");
-  const conclusion = document.getElementById("signal-conclusion");
-  const button = document.getElementById("signal-conclude");
-  status.textContent = "";
-  if (!digitalReading) {
-    status.textContent = "Сначала посчитайте запись.";
-    return;
-  }
-  button.disabled = true;
-  status.textContent = "Собираю заключение.";
-  try {
-    const response = await fetch("/api/ecg/signal/conclusion", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(digitalReading),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      status.textContent = (payload && payload.detail) || "Заключение не собралось.";
-      return;
-    }
-    signalProtocolText = payload.protocol || "";
-    conclusion.hidden = false;
-    conclusion.replaceChildren();
-    const title = document.createElement("h2");
-    title.textContent = "Протокол описания ЭКГ";
-    conclusion.appendChild(title);
-    fillProtocolHead(conclusion);
-    renderReport(signalProtocolText, "signal-conclusion", false);
-    document.getElementById("signal-share-actions").hidden = !signalProtocolText.trim();
-    status.textContent = "";
-  } catch (requestError) {
-    status.textContent = "Заключение не собралось. Нажмите кнопку ещё раз.";
-  } finally {
-    button.disabled = false;
-  }
-};
-
-document.getElementById("download-signal-protocol").onclick = () => downloadProtocol(signalProtocolText);
-document.getElementById("share-signal-protocol").onclick = () => {
-  shareProtocol(signalProtocolText, document.getElementById("signal-conclusion-status"));
-};
 </script>
 </body>
 </html>
+
