@@ -36,6 +36,8 @@ def index():
 PHONE_ASSETS = {
     "manifest.webmanifest": "application/manifest+json",
     "sw.js": "text/javascript",
+    "pdf.min.mjs": "text/javascript",
+    "pdf.worker.min.mjs": "text/javascript",
     "icon-192.png": "image/png",
     "icon-512.png": "image/png",
     "apple-touch-icon.png": "image/png",
@@ -75,6 +77,16 @@ def phone_apple_icon():
     return _phone_asset("apple-touch-icon.png")
 
 
+@app.get("/pdf.min.mjs")
+def pdf_library():
+    return _phone_asset("pdf.min.mjs")
+
+
+@app.get("/pdf.worker.min.mjs")
+def pdf_worker():
+    return _phone_asset("pdf.worker.min.mjs")
+
+
 async def _strip_frames(frames: list[UploadFile] | None) -> list[tuple[bytes, str, str]]:
     images: list[tuple[bytes, str, str]] = []
     for item in frames or []:
@@ -90,6 +102,7 @@ async def analyze(
     frames: list[UploadFile] | None = File(None),
     notes: str = Form(""),
     clinical_context: str = Form(""),
+    source: str = Form(""),
 ):
     images = await _strip_frames(frames)
     payload = None
@@ -103,6 +116,7 @@ async def analyze(
             images=images or None,
             notes=notes,
             clinical_context=clinical_context,
+            source="pdf" if source == "pdf" else "",
         )
     except EmptyCase as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

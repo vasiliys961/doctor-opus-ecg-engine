@@ -164,9 +164,9 @@
 
   <section id="panel-image" class="active">
     <h2>ЭКГ</h2>
-    <p class="note">Снимок или короткий ролик вдоль ленты.</p>
+    <p class="note">Снимок, PDF или короткий ролик вдоль ленты.</p>
     <div class="row" id="sources">
-      <label class="file">Изображение <input id="image-file" type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.heic,.heif"></label>
+      <label class="file">Снимок или PDF <input id="image-file" type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.heic,.heif,application/pdf,.pdf"></label>
       <label class="file">Видео ленты <input id="strip-video" type="file" accept="video/mp4,video/quicktime,video/webm,video/*"></label>
       <button class="primary" id="analyze-image" type="button">Разобрать</button>
     </div>
@@ -348,6 +348,7 @@ let reviewReady = Promise.resolve();
 let stripFrames = [];
 let stripReady = Promise.resolve();
 let stripUrls = [];
+let documentSource = "";
 
 function clearStrip() {
   stripFrames = [];
@@ -361,7 +362,7 @@ function clearStrip() {
   if (video) video.value = "";
 }
 
-function showStrip(files) {
+function showStrip(files, label) {
   stripUrls.forEach((url) => URL.revokeObjectURL(url));
   stripUrls = files.map((file) => URL.createObjectURL(file));
   const frames = document.getElementById("strip-frames");
@@ -369,7 +370,7 @@ function showStrip(files) {
   stripUrls.forEach((url, index) => {
     const image = document.createElement("img");
     image.src = url;
-    image.alt = "Кадр " + (index + 1);
+    image.alt = (label || "Кадр") + " " + (index + 1);
     frames.append(image);
   });
   frames.hidden = files.length === 0;
@@ -520,14 +521,109 @@ async function framesFromStrip(file) {
   }
 }
 
+function isPdf(file) {
+  return file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
+}
+
+function signalFileMessage(file) {
+  const name = (file.name || "").toLowerCase();
+  if (/\.(dcm|dicom|edf|scp|bdf)$/.test(name)) {
+    return "Это файл сигнала, не снимок. Страница читает картинку или PDF со страницами ЭКГ.";
+  }
+  return "";
+}
+
+function canvasPage(canvas, index) {
+  return new Promise((resolve, reject) => {
+    const paint = (quality) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("jpeg"));
+          return;
+        }
+        if (blob.size > 1400000 && quality > 0.45) {
+          paint(Math.round((quality - 0.1) * 100) / 100);
+          return;
+        }
+        resolve(new File([blob], "page-" + index + ".jpg", { type: "image/jpeg" }));
+      }, "image/jpeg", quality);
+    };
+    paint(0.72);
+  });
+}
+
+async function pagesFromPdf(file) {
+  const pdfjs = await import("/pdf.min.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  const data = new Uint8Array(await file.arrayBuffer());
+  const doc = await pdfjs.getDocument({ data, isEvalSupported: false }).promise;
+  const count = Math.min(doc.numPages, 6);
+  if (!count) throw new Error("pdf");
+  const files = [];
+  for (let number = 1; number <= count; number += 1) {
+    const page = await doc.getPage(number);
+    const unscaled = page.getViewport({ scale: 1 });
+    const scale = Math.min(2, 1400 / unscaled.width);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.floor(viewport.width));
+    canvas.height = Math.max(1, Math.floor(viewport.height));
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: context, viewport }).promise;
+    files.push(await canvasPage(canvas, number));
+  }
+  return { files, truncated: doc.numPages > 6 };
+}
+
 document.getElementById("image-file").onchange = () => {
   const file = document.getElementById("image-file").files[0];
   const error = document.getElementById("image-error");
+  const status = document.getElementById("analyze-status");
   error.textContent = "";
+  status.textContent = "";
   reviewImage = null;
+  documentSource = "";
   clearStrip();
   if (!file) {
     reviewReady = Promise.resolve();
+    return;
+  }
+  const signal = signalFileMessage(file);
+  if (signal) {
+    reviewReady = Promise.resolve();
+    error.textContent = signal;
+    document.getElementById("image-file").value = "";
+    return;
+  }
+  if (isPdf(file)) {
+    status.textContent = "Открываю страницы PDF.";
+    setBusy(true);
+    reviewReady = pagesFromPdf(file).then((result) => {
+      if (result.files.length === 1) {
+        reviewImage = result.files[0];
+        preview.src = URL.createObjectURL(reviewImage);
+        box.hidden = false;
+        preview.onload = placeHandles;
+        status.textContent = "";
+        return;
+      }
+      stripFrames = result.files;
+      documentSource = "pdf";
+      showStrip(result.files, "Страница");
+      status.textContent = result.truncated
+        ? "Взяты первые 6 страниц PDF."
+        : "Страниц PDF: " + result.files.length + ".";
+    }).catch(() => {
+      reviewImage = null;
+      documentSource = "";
+      box.hidden = true;
+      error.textContent = "PDF не открылся.";
+      status.textContent = "";
+    }).finally(() => {
+      setBusy(false);
+    });
     return;
   }
   reviewReady = imageForReview(file).then((ready) => {
@@ -538,7 +634,7 @@ document.getElementById("image-file").onchange = () => {
   }).catch(() => {
     reviewImage = null;
     box.hidden = true;
-    error.textContent = "Снимок с айфона не открылся. Нажмите «Изображение» и выберите «Снять фото».";
+    error.textContent = "Снимок с айфона не открылся. Нажмите «Снимок или PDF» и выберите фото.";
   });
 };
 
@@ -548,6 +644,7 @@ document.getElementById("strip-video").onchange = () => {
   const status = document.getElementById("analyze-status");
   error.textContent = "";
   reviewImage = null;
+  documentSource = "";
   reviewReady = Promise.resolve();
   document.getElementById("image-file").value = "";
   stripFrames = [];
@@ -601,20 +698,25 @@ document.getElementById("analyze-image").onclick = async () => {
     return;
   }
   if (picked && !file && !frames.length) {
-    error.textContent = "Снимок с айфона не открылся. Нажмите «Изображение» и выберите «Снять фото».";
+    error.textContent = isPdf(picked)
+      ? "PDF не открылся."
+      : "Снимок с айфона не открылся. Нажмите «Снимок или PDF» и выберите фото.";
     return;
   }
   if (!file && !frames.length) {
-    error.textContent = "Нужен снимок или ролик ленты.";
+    error.textContent = "Нужен снимок, PDF или ролик ленты.";
     return;
   }
   setBusy(true);
-  status.textContent = frames.length
-    ? "Разбираю ленту. Это занимает около минуты."
-    : "Разбираю снимок. Это занимает около минуты.";
+  status.textContent = documentSource === "pdf"
+    ? "Разбираю страницы PDF. Это занимает около минуты."
+    : frames.length
+      ? "Разбираю ленту. Это занимает около минуты."
+      : "Разбираю снимок. Это занимает около минуты.";
   const body = new FormData();
   frames.forEach((frame) => body.append("frames", frame));
   if (file) body.append("file", file);
+  if (documentSource === "pdf") body.append("source", "pdf");
   body.append("notes", "");
   body.append("clinical_context", document.getElementById("context").value);
   try {

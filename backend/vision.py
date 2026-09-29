@@ -299,16 +299,25 @@ STRIP_EYES_NOTE = (
     "Do not invent a measurement that is readable on none of the frames."
 )
 
+PDF_EYES_NOTE = (
+    "These pictures are ordered pages of one PDF of one ECG. "
+    "Read them as one document. "
+    "Do not treat the pages as separate patients or separate ECGs. "
+    "Page order is the order of the file, not ECG time. "
+    "Do not invent a measurement that is readable on none of the pages."
+)
+
 MAX_STRIP_FRAMES = 6
 MAX_FRAME_BYTES = 1_500_000
 MAX_PHOTO_BYTES = 4_000_000
 
 
-def _eyes_content(image_urls: list[str], notes: str) -> list | str:
+def _eyes_content(image_urls: list[str], notes: str, several: str = "") -> list | str:
     if image_urls:
         text = OBSERVER_PROMPT
         if len(image_urls) > 1:
-            text = f"{STRIP_EYES_NOTE}\n\n{text}"
+            note = PDF_EYES_NOTE if several == "pdf" else STRIP_EYES_NOTE
+            text = f"{note}\n\n{text}"
         if notes:
             text += (
                 "\n\nSUPPLIED TEXT is not the picture. "
@@ -343,6 +352,7 @@ def analyze_case(
     images: list[tuple[bytes, str, str]] | None = None,
     notes: str = "",
     clinical_context: str = "",
+    source: str = "",
 ) -> dict:
     """Глаза — Gemini, анализатор — Opus. Ансамбль 531 не вызывается."""
     supplied = notes.strip()
@@ -350,21 +360,31 @@ def analyze_case(
     payloads = [(payload, name, mime) for payload, name, mime in (images or []) if payload]
     if not payloads and image:
         payloads = [(image, filename, mime_type)]
+    document = source == "pdf"
     if len(payloads) > MAX_STRIP_FRAMES:
-        raise UnsupportedImage("Для ленты нужно не больше шести кадров.")
+        raise UnsupportedImage("Можно отправить не больше шести страниц или кадров.")
     image_urls: list[str] = []
     for payload, name, mime in payloads:
         raw, ready = prepare_image(payload, name, mime)
         limit = MAX_PHOTO_BYTES if len(payloads) == 1 else MAX_FRAME_BYTES
         if len(raw) > limit:
-            raise UnsupportedImage(
-                "Снимок слишком большой." if len(payloads) == 1 else "Кадр ленты слишком большой."
-            )
+            if len(payloads) == 1:
+                reason = "Снимок слишком большой."
+            elif document:
+                reason = "Страница PDF слишком большая."
+            else:
+                reason = "Кадр ленты слишком большой."
+            raise UnsupportedImage(reason)
         image_urls.append(f"data:{ready};base64,{base64.b64encode(raw).decode('ascii')}")
     image_preserved = bool(image_urls)
     if not image_urls and not supplied:
         raise EmptyCase("Нужно изображение ЭКГ или текст: измерения, описание, заключение аппарата.")
-    if len(image_urls) > 1 and supplied:
+    pages = document and len(image_urls) > 1
+    if pages and supplied:
+        kind = "pdf+text"
+    elif pages:
+        kind = "pdf"
+    elif len(image_urls) > 1 and supplied:
         kind = "strip+text"
     elif len(image_urls) > 1:
         kind = "strip"
@@ -374,7 +394,7 @@ def analyze_case(
         kind = "image"
     else:
         kind = "text"
-    observer_text = _completion(EYES_MODEL, _eyes_content(image_urls, supplied))
+    observer_text = _completion(EYES_MODEL, _eyes_content(image_urls, supplied, "pdf" if pages else ""))
     extraction, parse_warning = _parse_json(observer_text)
     interpretation = _completion(ANALYZER_MODEL, _analyzer_input(observer_text, supplied, context))
     return {
