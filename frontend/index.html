@@ -109,7 +109,6 @@
     </div>
     <div id="strip-frames" class="strip-frames" hidden></div>
     <video id="strip-player" class="strip-player" playsinline muted></video>
-    <label>Текст: измерения, описание кривой, заключение аппарата<br><textarea id="notes"></textarea></label>
     <label>Клинический контекст без фамилии и контактов<br><textarea id="context"></textarea></label>
     <button type="button" id="dictate-context">Голосом</button>
     <div class="preview-wrap" id="preview-box" hidden>
@@ -138,9 +137,9 @@
     <p id="protocol-status" class="note"></p>
     <article id="protocol" class="report protocol-sheet" hidden></article>
     <div class="row" id="share-actions" hidden>
-      <button id="print-protocol" type="button">Печать</button>
+      <button id="print-protocol" type="button">На принтер</button>
       <button id="download-protocol" type="button">Скачать Word</button>
-      <button id="share-protocol" type="button">Поделиться</button>
+      <button id="share-protocol" type="button">На компьютер</button>
     </div>
   </section>
 </main>
@@ -497,7 +496,6 @@ document.getElementById("analyze-image").onclick = async () => {
   const pickedVideo = document.getElementById("strip-video").files[0];
   const frames = stripFrames.slice();
   const file = frames.length ? null : reviewImage;
-  const notes = document.getElementById("notes").value.trim();
   const error = document.getElementById("image-error");
   const status = document.getElementById("analyze-status");
   error.textContent = "";
@@ -509,8 +507,8 @@ document.getElementById("analyze-image").onclick = async () => {
     error.textContent = "Снимок с айфона не открылся. Нажмите «Изображение» и выберите «Снять фото».";
     return;
   }
-  if (!file && !frames.length && !notes) {
-    error.textContent = "Нужен снимок, ролик ленты или текст.";
+  if (!file && !frames.length) {
+    error.textContent = "Нужен снимок или ролик ленты.";
     return;
   }
   setBusy(true);
@@ -520,7 +518,7 @@ document.getElementById("analyze-image").onclick = async () => {
   const body = new FormData();
   frames.forEach((frame) => body.append("frames", frame));
   if (file) body.append("file", file);
-  body.append("notes", notes);
+  body.append("notes", "");
   body.append("clinical_context", document.getElementById("context").value);
   try {
     const response = await fetch("/api/ecg/analyze", { method: "POST", body });
@@ -755,9 +753,21 @@ function downloadProtocol(body) {
 
 async function shareProtocol(body, status) {
   const text = protocolDocument(body);
+  const stamp = document.getElementById("patient-date").value || "protocol";
+  const word = new File(
+    [protocolDocx(body)],
+    `ecg-${stamp}.docx`,
+    { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+  );
+  const plain = new File([text], `ecg-${stamp}.txt`, { type: "text/plain" });
+  const payload = navigator.canShare && navigator.canShare({ files: [word] })
+    ? { title: "Протокол описания ЭКГ", files: [word] }
+    : navigator.canShare && navigator.canShare({ files: [plain] })
+      ? { title: "Протокол описания ЭКГ", text, files: [plain] }
+      : { title: "Протокол описания ЭКГ", text };
   if (navigator.share) {
     try {
-      await navigator.share({ title: "Протокол описания ЭКГ", text });
+      await navigator.share(payload);
       return;
     } catch (shareError) {
       if (shareError && shareError.name === "AbortError") return;
