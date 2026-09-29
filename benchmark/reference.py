@@ -1,17 +1,11 @@
-"""Оценка уже обученного ансамбля на опубликованном 531-векторе. Веса не меняются."""
+"""Проверка опубликованной таблицы 531. Ансамбль, который её считал, удалён."""
 
 from __future__ import annotations
 
-import csv
 import hashlib
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
 from benchmark.data import OFFICIAL_ECGDELI_SHA256
-from benchmark.label_mapping import TARGET_CODES
-from ecg_engine.ensemble import predict_csv, predict_features
 from ecg_engine.feature_columns import FEATURE_COLUMNS
 
 
@@ -27,14 +21,14 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _ensemble_removed() -> None:
+    raise RuntimeError("Ансамбль 531 удалён вместе с весами. Цифровую ЭКГ считает ECGFounder.")
+
+
 def regression_max_abs(fixture: Path, model_dir: Path) -> float:
-    """Именованный вход benchmark и CSV-вход текущего inference на одной строке."""
-    from_csv = predict_csv(str(fixture), model_dir).ensemble
-    frame = pd.read_csv(fixture)
-    row = frame.iloc[0]
-    features = {name: row[name] for name in FEATURE_COLUMNS}
-    from_names = predict_features(features, model_dir).ensemble
-    return float(np.max(np.abs(from_csv - from_names)))
+    del fixture, model_dir
+    _ensemble_removed()
+    return 0.0
 
 
 def column_order_status(columns: list[str]) -> str:
@@ -115,45 +109,11 @@ def require_official_feature_table(path: Path) -> None:
 
 
 def sanity_known_record(fixture: Path, model_dir: Path) -> dict[str, object]:
-    """Один известный ECG. Это не статистический benchmark."""
-    frame = pd.read_csv(fixture)
-    row = frame.iloc[0]
-    values = np.array([float(row[name]) for name in FEATURE_COLUMNS], dtype=np.float64)
-    if values.shape != (531,):
-        raise FeatureTableError(f"Sanity shape {values.shape}, ожидалось (531,).")
-    if not np.isfinite(values).all():
-        raise FeatureTableError("Sanity vector содержит NaN или Inf.")
-    probabilities = predict_features({name: row[name] for name in FEATURE_COLUMNS}, model_dir).ensemble
-    if probabilities.shape != (24,):
-        raise FeatureTableError(f"Sanity prediction shape {probabilities.shape}.")
-    if not np.isfinite(probabilities).all() or np.any(probabilities < 0) or np.any(probabilities > 1):
-        raise FeatureTableError("Sanity probabilities вне [0, 1].")
-    return {
-        "role": "sanity_not_benchmark",
-        "ecg_id": str(row["ecg_id"]) if "ecg_id" in frame.columns else None,
-        "shape": 531,
-        "prediction_shape": 24,
-        "probability_range": [float(probabilities.min()), float(probabilities.max())],
-    }
+    del fixture, model_dir
+    _ensemble_removed()
+    return {}
 
 
 def predict_published_table(table: Path, ecg_ids: list[str], model_dir: Path, destination: Path) -> None:
-    require_official_feature_table(table)
-    frame = pd.read_csv(table)
-    if "ecg_id" not in frame.columns:
-        raise FeatureTableError("В таблице признаков нет ecg_id.")
-    missing = [name for name in FEATURE_COLUMNS if name not in frame.columns]
-    if missing:
-        raise FeatureTableError(f"В таблице нет колонок схемы, первая: {missing[0]}.")
-    indexed = frame.set_index(frame["ecg_id"].map(lambda value: str(int(value))))
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    with destination.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(["ecg_id", *[f"{code}_prob" for code in TARGET_CODES]])
-        for ecg_id in ecg_ids:
-            if ecg_id not in indexed.index:
-                raise FeatureTableError(f"Для ecg_id {ecg_id} нет опубликованной строки 531.")
-            row = indexed.loc[ecg_id]
-            features = {name: row[name] for name in FEATURE_COLUMNS}
-            probabilities = predict_features(features, model_dir).ensemble
-            writer.writerow([ecg_id, *[float(value) for value in probabilities]])
+    del table, ecg_ids, model_dir, destination
+    _ensemble_removed()

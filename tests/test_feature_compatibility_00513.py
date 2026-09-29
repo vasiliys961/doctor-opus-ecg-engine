@@ -14,7 +14,6 @@ from fastapi.testclient import TestClient
 
 from backend.app import app
 from ecg_engine.canonical_schema import FEATURE_COLUMNS_531, FEATURE_INDEX_531
-from ecg_engine.ensemble import predict_features
 from ecg_engine.feature_columns import FEATURE_COLUMNS
 from ecg_engine.feature_compatibility import ECGInferenceAdapter, FeatureCompatibilityEngine
 from ecg_engine.feature_registry import REGISTRY, split_feature
@@ -186,19 +185,6 @@ def test_raw_vector_is_rejected_by_ensemble_schema():
     features = {name: value for name, value in zip(FEATURE_COLUMNS_531, result["features"])}
     with pytest.raises(ECGSchemaError):
         read_feature_mapping(features)
-
-
-def test_reference_csv_prediction_is_stable():
-    frame = pd.read_csv(FIXTURE)
-    features = {column: float(frame.iloc[0][column]) for column in FEATURE_COLUMNS}
-    before = predict_features(features).ensemble
-    after = predict_features(features).ensemble
-    assert float(np.max(np.abs(before - after))) <= EXACT_LIMIT
-    with TestClient(app) as client:
-        response = client.post("/api/ecg/predict", json={"features": features})
-    assert response.status_code == 200
-    body = response.json()
-    assert float(np.max(np.abs(np.asarray(body["models"]["ensemble"]) - after))) <= EXACT_LIMIT
 
 
 def test_raw_features_endpoint_has_no_prediction():

@@ -7,6 +7,7 @@
   <style>
     :root { color-scheme: light; --ink: #1c2430; --line: #d5dbe3; --paper: #f4f7f8; --accent: #0f6e6e; }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     body { margin: 0; font: 16px/1.45 "Iowan Old Style", Palatino, Georgia, serif; color: var(--ink); background: var(--paper); }
     main { max-width: 1080px; margin: 0 auto; padding: 28px 20px 64px; }
     h1 { font-size: 1.8rem; margin: 0 0 8px; }
@@ -16,8 +17,7 @@
     .modes button, .primary { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 8px 14px; cursor: pointer; }
     .modes button.active { background: var(--accent); color: white; border-color: var(--accent); }
     .primary { background: var(--accent); color: white; border-color: var(--accent); }
-    section { display: none; background: white; border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
-    section.active { display: block; }
+    section { display: block; margin-top: 16px; background: white; border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
     .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 12px 0; }
     label.file { display: inline-block; }
     textarea { width: 100%; min-height: 72px; font: inherit; padding: 8px; }
@@ -30,27 +30,57 @@
     .preview-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     .handle { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #0f6e6e; border: 2px solid white; cursor: grab; }
     .error { color: #8d1d1d; }
+    .report h3 { margin: 18px 0 6px; font-size: 1.05rem; color: var(--accent); }
+    .report p, .report li { max-width: 68ch; margin: 0 0 8px; }
+    .report ul { margin: 0 0 8px; padding-left: 1.2rem; }
+    label.field { display: flex; flex-direction: column; gap: 4px; min-width: 12rem; }
+    label.field input, label.field select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+    .protocol-sheet { margin-top: 8px; }
+    .protocol-sheet h2 { margin: 0 0 4px; font-size: 1.35rem; }
+    .protocol-head p { margin: 0 0 2px; }
+    #signal-trace { width: 100%; height: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+    @media print {
+      body { background: white; }
+      main > h1, main > .note, #patient-card, #panel-signal, #panel-image > h2, #panel-image > .note,
+      #panel-image .row, #panel-image label, #panel-image .stage, #image-error,
+      #interpretation, #protocol-actions, #share-actions, #protocol-status { display: none !important; }
+      #panel-image { border: 0; padding: 0; }
+      #protocol { display: block !important; }
+    }
     .coming { background: #eef3f3; }
     @media (max-width: 800px) { .stage { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
 <main>
-  <h1>Doctor Opus ECG Engine</h1>
-  <p class="note">Исследовательская система поддержки решения. Число сети — сигмоида ансамбля, не калиброванная клиническая вероятность.</p>
-  <div class="modes">
-    <button type="button" id="tab-image" class="active">ECG Image</button>
-    <button type="button" id="tab-csv">ECG 531 Features</button>
-    <button type="button" id="tab-raw">Raw 12-lead</button>
-  </div>
+  <h1>Doctor Opus ECG</h1>
+  <p class="note">Два входа. Снимок или текст разбирают Gemini 3.8 Flash и Opus 5.5. Цифровую запись с аппарата, около 10 секунд и 12 отведений, считает ECGFounder, и по той же кривой снимается разметка зубцов. Это поддержка решения, не диагноз.</p>
+
+  <section id="patient-card">
+    <h2>Шапка протокола</h2>
+    <p class="note">ФИО, возраст и пол остаются на этом компьютере и в модель не отправляются. Возраст считается из года рождения и даты снятия.</p>
+    <div class="row">
+      <label class="field">ФИО <input id="patient-name" type="text" autocomplete="name"></label>
+      <label class="field">Год рождения <input id="patient-year" type="number" inputmode="numeric" min="1900" max="2100" step="1"></label>
+      <label class="field">Пол
+        <select id="patient-sex">
+          <option value="">не указан</option>
+          <option value="муж.">муж.</option>
+          <option value="жен.">жен.</option>
+        </select>
+      </label>
+      <label class="field">Дата снятия ЭКГ <input id="patient-date" type="date"></label>
+    </div>
+  </section>
 
   <section id="panel-image" class="active">
-    <h2>Изображение ЭКГ</h2>
-    <p class="note">Файл показывается как есть. Края не закрашиваются, картинка на сервере не перекодируется. PDF и одноканальный USB-снимок сюда не входят как raw 12-lead.</p>
+    <h2>ЭКГ</h2>
+    <p class="note">Можно приложить снимок, вставить текст или сделать и то и другое. Снимок на сервере не перекодируется и края не закрашиваются. PDF сюда не входит.</p>
     <div class="row">
       <label class="file">Изображение <input id="image-file" type="file" accept="image/jpeg,image/png,image/gif,image/webp"></label>
-      <button class="primary" id="analyze-image" type="button">Разобрать изображение</button>
+      <button class="primary" id="analyze-image" type="button">Разобрать</button>
     </div>
+    <label>Текст: измерения, описание кривой, заключение аппарата<br><textarea id="notes"></textarea></label>
     <label>Клинический контекст без фамилии и контактов<br><textarea id="context"></textarea></label>
     <div class="stage">
       <div>
@@ -73,54 +103,60 @@
         <p id="caliper-readout">Интервал: — · Амплитуда: —</p>
       </div>
     </div>
+    <p id="analyze-status" class="note"></p>
     <p id="image-error" class="error"></p>
-    <h3>JSON наблюдателя</h3>
-    <pre id="extraction"></pre>
-    <h3>Интерпретация</h3>
-    <pre id="interpretation"></pre>
-  </section>
-
-  <section id="panel-csv">
-    <h2>531 признак</h2>
-    <p class="note">CSV с колонкой ecg_id, если она есть, и ровно 531 признаком в порядке обучения. Первая строка. Порога нет.</p>
-    <div class="row">
-      <label class="file">CSV <input id="csv-file" type="file" accept=".csv,text/csv"></label>
+    <article id="interpretation" class="report"></article>
+    <div class="row" id="protocol-actions" hidden>
+      <button class="primary" id="make-protocol" type="button">Сформировать протокол</button>
     </div>
-    <p id="csv-error" class="error"></p>
-    <table>
-      <thead><tr><th>Код</th><th>English</th><th>Русское название</th><th>Score</th></tr></thead>
-      <tbody id="predictions"></tbody>
-    </table>
+    <p id="protocol-status" class="note"></p>
+    <article id="protocol" class="report protocol-sheet" hidden></article>
+    <div class="row" id="share-actions" hidden>
+      <button id="print-protocol" type="button">Печать</button>
+      <button id="download-protocol" type="button">Скачать Word</button>
+      <button id="share-protocol" type="button">Поделиться</button>
+    </div>
   </section>
 
-  <section id="panel-raw" class="coming">
-    <h2>RAW ECG → FEATURE COMPATIBILITY</h2>
-    <p class="note">Reconstructed 531-feature representation. Это не опубликованные признаки PTB-XL+.</p>
-    <p id="raw-counts">531 features generated · reconstructed — · not executed — · unknown —</p>
-    <p id="raw-warning">⚠ Exact PTB-XL+ compatibility: NOT PROVEN</p>
-    <p class="note">Существующий ансамбль на этот вектор не запускается. Неизвестные колонки остаются пустыми.</p>
-    <button class="primary" id="check-raw" type="button">Проверить контракт слоя</button>
-    <p id="raw-error" class="error"></p>
-    <pre id="raw-result"></pre>
+  <section id="panel-signal">
+    <h2>Цифровая ЭКГ, ECGFounder</h2>
+    <p class="note">CSV: первая строка — имена отведений I, II, III, aVR, aVL, aVF, V1–V6, дальше отсчёты. Нужно около 10 секунд при указанной частоте. Готовые файлы лежат в папке examples2. На экране кривая, короткая разметка и бланк. Усреднённый комплекс из 600 отсчётов сюда не входит.</p>
+    <div class="row">
+      <label class="file">CSV <input id="signal-file" type="file" accept=".csv,text/csv"></label>
+      <label>Частота, Гц <input id="signal-fs" type="number" min="1" step="1" value="500"></label>
+      <button class="primary" id="score-signal" type="button">Посчитать</button>
+      <button id="score-example" type="button">Пример записи</button>
+      <button id="signal-conclude" type="button" hidden>Сформировать заключение</button>
+    </div>
+    <p id="signal-error" class="error"></p>
+    <p id="signal-status" class="note"></p>
+    <h3 id="trace-title" hidden>Кривая</h3>
+    <canvas id="signal-trace" hidden></canvas>
+    <p id="trace-note" class="note" hidden>Сетка условная. Это не калибр 25 мм/с.</p>
+    <h3 id="measure-title" hidden>Разметка</h3>
+    <p id="measure-description"></p>
+    <table id="measure-table" hidden>
+      <thead><tr><th>Параметр</th><th>Значение</th></tr></thead>
+      <tbody id="signal-measures"></tbody>
+    </table>
+    <p id="signal-conclusion-status" class="note"></p>
+    <article id="signal-conclusion" class="report protocol-sheet" hidden></article>
+    <div class="row" id="signal-share-actions" hidden>
+      <button id="download-signal-protocol" type="button">Скачать Word</button>
+      <button id="share-signal-protocol" type="button">Поделиться</button>
+    </div>
   </section>
 </main>
 <script>
-const tabs = ["image", "csv", "raw"];
-tabs.forEach((name) => {
-  document.getElementById("tab-" + name).onclick = () => {
-    tabs.forEach((other) => {
-      document.getElementById("tab-" + other).classList.toggle("active", other === name);
-      document.getElementById("panel-" + other).classList.toggle("active", other === name);
-    });
-  };
-});
-
 const preview = document.getElementById("preview");
 const box = document.getElementById("preview-box");
 const svg = document.getElementById("caliper");
 const handleA = document.getElementById("handle-a");
 const handleB = document.getElementById("handle-b");
 let points = [{ x: 40, y: 80 }, { x: 160, y: 80 }];
+let shownConclusion = "";
+let shownExtraction = null;
+let protocolText = "";
 let drag = null;
 
 function placeHandles() {
@@ -176,91 +212,552 @@ document.getElementById("image-file").onchange = () => {
   preview.onload = placeHandles;
 };
 
-document.getElementById("analyze-image").onclick = async () => {
-  const file = document.getElementById("image-file").files[0];
-  const error = document.getElementById("image-error");
-  error.textContent = "";
-  if (!file) {
-    error.textContent = "Сначала выберите изображение.";
-    return;
+function errorText(payload, fallback) {
+  const detail = payload && payload.detail;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const text = detail.map((item) => item.msg || "").filter(Boolean).join(" ");
+    if (text) return text;
   }
-  const body = new FormData();
-  body.append("file", file);
-  body.append("clinical_context", document.getElementById("context").value);
-  const response = await fetch("/api/ecg/image", { method: "POST", body });
-  const payload = await response.json();
-  if (!response.ok) {
-    error.textContent = payload.detail || "Анализ изображения не выполнен.";
-    return;
-  }
-  document.getElementById("extraction").textContent = JSON.stringify(payload.extraction || payload.observer_text, null, 2);
-  document.getElementById("interpretation").textContent = payload.interpretation || "";
-};
-
-function splitCsvLine(line) {
-  return line.split(",").map((cell) => cell.trim().replace(/^"|"$/g, ""));
+  return fallback;
 }
 
-document.getElementById("csv-file").onchange = async () => {
-  const file = document.getElementById("csv-file").files[0];
-  const error = document.getElementById("csv-error");
+function setBusy(busy) {
+  document.getElementById("analyze-image").disabled = busy;
+  document.getElementById("make-protocol").disabled = busy;
+}
+
+document.getElementById("analyze-image").onclick = async () => {
+  const file = document.getElementById("image-file").files[0];
+  const notes = document.getElementById("notes").value.trim();
+  const error = document.getElementById("image-error");
+  const status = document.getElementById("analyze-status");
   error.textContent = "";
-  document.getElementById("predictions").innerHTML = "";
-  if (!file) return;
-  const text = await file.text();
-  const lines = text.trim().split(/\r?\n/).filter(Boolean);
-  if (lines.length < 2) {
-    error.textContent = "В CSV нет строки данных.";
+  if (!file && !notes) {
+    error.textContent = "Нужен снимок или текст.";
     return;
   }
-  const header = splitCsvLine(lines[0]);
-  const row = splitCsvLine(lines[1]);
-  const features = {};
-  header.forEach((name, index) => {
-    if (name !== "ecg_id") features[name] = row[index];
-  });
-  const response = await fetch("/api/ecg/predict", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ features }),
-  });
-  const payload = await response.json();
-  if (!response.ok) {
-    error.textContent = payload.detail || "Инференс не выполнен.";
-    return;
+  setBusy(true);
+  status.textContent = "Разбираю снимок. Это занимает около минуты.";
+  const body = new FormData();
+  if (file) body.append("file", file);
+  body.append("notes", notes);
+  body.append("clinical_context", document.getElementById("context").value);
+  try {
+    const response = await fetch("/api/ecg/analyze", { method: "POST", body });
+    const payload = await response.json();
+    if (!response.ok) {
+      error.textContent = errorText(payload, "Разбор не выполнен.");
+      return;
+    }
+    shownConclusion = payload.interpretation || "";
+    shownExtraction = payload.extraction || null;
+    protocolText = "";
+    document.getElementById("protocol").replaceChildren();
+    document.getElementById("protocol").hidden = true;
+    document.getElementById("share-actions").hidden = true;
+    document.getElementById("protocol-status").textContent = "";
+    renderReport(shownConclusion, "interpretation");
+    document.getElementById("protocol-actions").hidden = !shownConclusion.trim();
+    document.getElementById("interpretation").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (requestError) {
+    error.textContent = "Разбор прервался. Нажмите «Разобрать» ещё раз.";
+  } finally {
+    status.textContent = "";
+    setBusy(false);
   }
-  const body = document.getElementById("predictions");
-  payload.predictions.forEach((item) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${item.scp_code}</td><td>${item.label_en}</td><td>${item.label_ru}</td><td class="score">${item.probability.toFixed(4)}</td>`;
-    body.appendChild(tr);
-  });
 };
 
-document.getElementById("check-raw").onclick = async () => {
-  const error = document.getElementById("raw-error");
-  error.textContent = "";
-  const leads = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"];
-  const signal = Array.from({ length: 20 }, () => leads.map(() => 0));
-  const response = await fetch("/api/ecg/raw/features", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ signal, sampling_rate: 500, lead_names: leads }),
-  });
-  const payload = await response.json();
-  if (!response.ok) {
-    error.textContent = payload.detail || "Слой совместимости не ответил.";
+document.getElementById("make-protocol").onclick = async () => {
+  const status = document.getElementById("protocol-status");
+  const source = shownConclusion.trim() || document.getElementById("interpretation").innerText.trim();
+  if (!source) {
+    status.textContent = "Сначала дождитесь заключения по кнопке «Разобрать».";
     return;
   }
-  const counts = payload.counts || {};
-  document.getElementById("raw-counts").textContent =
-    `${payload.feature_count} features generated · ${counts.reconstructed} features reconstructed · ${counts.not_executed} features not executed · ${counts.unknown} features unknown`;
-  document.getElementById("raw-result").textContent = JSON.stringify({
-    status: payload.status,
-    raw_to_531_status: payload.raw_to_531_status,
-    feature_count: payload.feature_count,
-    prediction: payload.prediction,
-  }, null, 2);
+  setBusy(true);
+  status.textContent = "Собираю протокол. Это отдельный шаг и тоже занимает время.";
+  try {
+    const response = await fetch("/api/ecg/protocol", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interpretation: source, extraction: shownExtraction }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      status.textContent = errorText(payload, "Протокол не собран.");
+      return;
+    }
+    protocolText = payload.protocol || "";
+    if (!protocolText.trim()) {
+      status.textContent = "Протокол пришёл пустым.";
+      return;
+    }
+    renderProtocol(protocolText);
+    status.textContent = "";
+    document.getElementById("share-actions").hidden = false;
+    document.getElementById("protocol").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (requestError) {
+    status.textContent = "Протокол не собрался. Нажмите кнопку ещё раз.";
+  } finally {
+    setBusy(false);
+  }
+};
+
+document.getElementById("print-protocol").onclick = () => window.print();
+document.getElementById("download-protocol").onclick = () => downloadProtocol(protocolText);
+document.getElementById("share-protocol").onclick = () => shareProtocol(protocolText, document.getElementById("protocol-status"));
+
+const SECTION_TITLES = {
+  "technical parameters": "Запись",
+  "findings": "Что видно",
+  "differential diagnosis": "С чем сравнивать",
+  "clinical correlation needed": "Что проверить у пациента",
+  "impression": "Заключение",
+  "recommendations": "Что делать",
+  "запись": "Запись",
+  "что видно": "Что видно",
+  "с чем сравнивать": "С чем сравнивать",
+  "что проверить у пациента": "Что проверить у пациента",
+  "заключение": "Заключение",
+  "что делать": "Что делать",
+  "технические параметры": "Технические параметры",
+  "описание": "Описание",
+  "дифференциальный диагноз": "Дифференциальный диагноз",
+  "клиническое сопоставление": "Клиническое сопоставление",
+  "рекомендации": "Рекомендации",
+  "ритм": "Ритм",
+  "чсс": "ЧСС",
+  "электрическая ось сердца": "Электрическая ось сердца",
+  "зубец p": "Зубец P",
+  "интервал pq": "Интервал PQ",
+  "комплекс qrs": "Комплекс QRS",
+  "сегмент st": "Сегмент ST",
+  "зубец t": "Зубец T",
+  "интервал qt": "Интервал QT",
+  "миннесота": "Миннесота",
+  "интервалы": "Интервалы",
+  "зубцы": "Зубцы",
+  "важные соотношения": "Важные соотношения",
+  "депрессии и элевации": "Депрессии и элевации",
+  "патологические зубцы": "Патологические зубцы",
+};
+
+function ageText(years) {
+  const n = years % 100;
+  const last = n % 10;
+  if (n > 10 && n < 20) return `${years} лет`;
+  if (last === 1) return `${years} год`;
+  if (last >= 2 && last <= 4) return `${years} года`;
+  return `${years} лет`;
+}
+
+function patientLines() {
+  const recorded = document.getElementById("patient-date").value;
+  const birth = document.getElementById("patient-year").value.trim();
+  const sex = document.getElementById("patient-sex").value;
+  let recordedText = "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(recorded)) {
+    const [year, month, day] = recorded.split("-");
+    recordedText = `${day}.${month}.${year}`;
+  }
+  let age = "";
+  if (/^\d{4}$/.test(birth) && /^\d{4}/.test(recorded)) {
+    const years = Number(recorded.slice(0, 4)) - Number(birth);
+    if (years >= 0 && years <= 130) age = ageText(years);
+  }
+  const lines = [
+    ["ФИО", document.getElementById("patient-name").value.trim()],
+    ["Возраст", age],
+  ];
+  if (!age && birth) lines.push(["Год рождения", birth]);
+  if (sex) lines.push(["Пол", sex]);
+  lines.push(["Дата снятия ЭКГ", recordedText]);
+  return lines;
+}
+
+function protocolDocument(body) {
+  const head = patientLines().map(([label, value]) => `${label}: ${value}`).join("\n");
+  return `Протокол описания ЭКГ\n${head}\n\n${String(body).trim()}`.replace(/\*\*/g, "").replace(/\*/g, "");
+}
+
+function crc32(data) {
+  let crc = -1;
+  for (let index = 0; index < data.length; index += 1) {
+    crc ^= data[index];
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+    }
+  }
+  return (~crc) >>> 0;
+}
+
+function storeZip(files) {
+  const encoder = new TextEncoder();
+  const locals = [];
+  const central = [];
+  let offset = 0;
+  files.forEach((file) => {
+    const name = encoder.encode(file.name);
+    const data = typeof file.data === "string" ? encoder.encode(file.data) : file.data;
+    const crc = crc32(data);
+    const local = new Uint8Array(30 + name.length + data.length);
+    const view = new DataView(local.buffer);
+    view.setUint32(0, 0x04034b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint32(14, crc, true);
+    view.setUint32(18, data.length, true);
+    view.setUint32(22, data.length, true);
+    view.setUint16(26, name.length, true);
+    local.set(name, 30);
+    local.set(data, 30 + name.length);
+    locals.push(local);
+    const entry = new Uint8Array(46 + name.length);
+    const directory = new DataView(entry.buffer);
+    directory.setUint32(0, 0x02014b50, true);
+    directory.setUint16(4, 20, true);
+    directory.setUint16(6, 20, true);
+    directory.setUint32(16, crc, true);
+    directory.setUint32(20, data.length, true);
+    directory.setUint32(24, data.length, true);
+    directory.setUint16(28, name.length, true);
+    directory.setUint32(42, offset, true);
+    entry.set(name, 46);
+    central.push(entry);
+    offset += local.length;
+  });
+  const centralSize = central.reduce((sum, entry) => sum + entry.length, 0);
+  const end = new Uint8Array(22);
+  const endView = new DataView(end.buffer);
+  endView.setUint32(0, 0x06054b50, true);
+  endView.setUint16(8, files.length, true);
+  endView.setUint16(10, files.length, true);
+  endView.setUint32(12, centralSize, true);
+  endView.setUint32(16, offset, true);
+  return new Blob([...locals, ...central, end], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+}
+
+function protocolDocx(body) {
+  const escape = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const paragraphs = protocolDocument(body).split("\n").map((line) => (
+    `<w:p><w:r><w:t xml:space="preserve">${escape(line)}</w:t></w:r></w:p>`
+  )).join("");
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraphs}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/></w:sectPr></w:body></w:document>`;
+  return storeZip([
+    {
+      name: "[Content_Types].xml",
+      data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`,
+    },
+    {
+      name: "_rels/.rels",
+      data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
+    },
+    { name: "word/document.xml", data: documentXml },
+    {
+      name: "word/_rels/document.xml.rels",
+      data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`,
+    },
+  ]);
+}
+
+function downloadProtocol(body) {
+  const stamp = document.getElementById("patient-date").value || "protocol";
+  const url = URL.createObjectURL(protocolDocx(body));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `ecg-${stamp}.docx`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+async function shareProtocol(body, status) {
+  const text = protocolDocument(body);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Протокол описания ЭКГ", text });
+      return;
+    } catch (shareError) {
+      if (shareError && shareError.name === "AbortError") return;
+    }
+  }
+  await navigator.clipboard.writeText(text);
+  status.textContent = "Текст протокола скопирован.";
+}
+
+function fillProtocolHead(root) {
+  let head = root.querySelector(".protocol-head");
+  if (!head) {
+    head = document.createElement("div");
+    head.className = "protocol-head";
+    const title = root.querySelector("h2");
+    if (title) title.after(head);
+    else root.prepend(head);
+  }
+  head.replaceChildren();
+  patientLines().forEach(([label, value]) => {
+    const line = document.createElement("p");
+    line.textContent = `${label}: ${value}`;
+    head.appendChild(line);
+  });
+}
+
+["patient-name", "patient-year", "patient-date", "patient-sex"].forEach((id) => {
+  document.getElementById(id).addEventListener("input", () => {
+    ["protocol", "signal-conclusion"].forEach((targetId) => {
+      const root = document.getElementById(targetId);
+      if (!root.hidden && root.querySelector(".protocol-head")) fillProtocolHead(root);
+    });
+  });
+});
+
+function renderProtocol(text) {
+  const root = document.getElementById("protocol");
+  root.hidden = false;
+  root.replaceChildren();
+  const title = document.createElement("h2");
+  title.textContent = "Протокол описания ЭКГ";
+  root.append(title);
+  fillProtocolHead(root);
+  renderReport(text, "protocol", false);
+}
+
+function renderReport(text, targetId = "interpretation", clear = true) {
+  const root = document.getElementById(targetId);
+  if (clear) root.replaceChildren();
+  const cleaned = String(text).replace(/\*\*/g, "").replace(/\*/g, "");
+  let list = null;
+  cleaned.split("\n").forEach((raw) => {
+    const line = raw.trim();
+    if (!line) {
+      list = null;
+      return;
+    }
+    const bare = line.replace(/:$/, "");
+    const title = SECTION_TITLES[bare.toLowerCase()];
+    if (title) {
+      list = null;
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      root.appendChild(heading);
+      return;
+    }
+    const item = line.replace(/^[-•]\s*/, "");
+    if (/не указано|not specified/i.test(item)) return;
+    if (line.startsWith("-") || line.startsWith("•")) {
+      if (!list) {
+        list = document.createElement("ul");
+        root.appendChild(list);
+      }
+      const row = document.createElement("li");
+      row.textContent = item;
+      list.appendChild(row);
+      return;
+    }
+    list = null;
+    const paragraph = document.createElement("p");
+    paragraph.textContent = item;
+    root.appendChild(paragraph);
+  });
+}
+
+let digitalReading = null;
+let signalProtocolText = "";
+
+function drawTrace(trace) {
+  const canvas = document.getElementById("signal-trace");
+  const title = document.getElementById("trace-title");
+  const note = document.getElementById("trace-note");
+  if (!trace || !trace.length) {
+    canvas.hidden = true;
+    title.hidden = true;
+    note.hidden = true;
+    return;
+  }
+  const cssWidth = Math.max(640, canvas.parentElement.clientWidth - 4);
+  const rowHeight = 46;
+  const cssHeight = trace.length * rowHeight + 8;
+  const scale = window.devicePixelRatio || 1;
+  canvas.width = Math.round(cssWidth * scale);
+  canvas.height = Math.round(cssHeight * scale);
+  canvas.style.width = `${cssWidth}px`;
+  canvas.style.height = `${cssHeight}px`;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.fillStyle = "#fffdf8";
+  ctx.fillRect(0, 0, cssWidth, cssHeight);
+  ctx.strokeStyle = "#f3c7c7";
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= cssWidth; x += 20) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, cssHeight);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= cssHeight; y += 20) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(cssWidth, y);
+    ctx.stroke();
+  }
+  const labelWidth = 36;
+  trace.forEach((lead, index) => {
+    const samples = lead.samples || [];
+    const mid = index * rowHeight + rowHeight / 2 + 4;
+    let peak = 0.2;
+    samples.forEach((value) => { peak = Math.max(peak, Math.abs(Number(value) || 0)); });
+    const gain = (rowHeight * 0.4) / peak;
+    ctx.fillStyle = "#1c2430";
+    ctx.font = "12px sans-serif";
+    ctx.fillText(lead.lead || "", 4, mid + 4);
+    ctx.beginPath();
+    ctx.strokeStyle = "#143d4a";
+    ctx.lineWidth = 1.15;
+    samples.forEach((value, sampleIndex) => {
+      const x = labelWidth + (sampleIndex / Math.max(samples.length - 1, 1)) * (cssWidth - labelWidth - 8);
+      const y = mid - Number(value) * gain;
+      if (sampleIndex === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+  canvas.hidden = false;
+  title.hidden = false;
+  note.hidden = false;
+}
+
+async function scoreDigital(load) {
+  const error = document.getElementById("signal-error");
+  const status = document.getElementById("signal-status");
+  const measureBody = document.getElementById("signal-measures");
+  const measureTable = document.getElementById("measure-table");
+  const measureTitle = document.getElementById("measure-title");
+  const measureDescription = document.getElementById("measure-description");
+  const button = document.getElementById("score-signal");
+  const conclude = document.getElementById("signal-conclude");
+  const conclusion = document.getElementById("signal-conclusion");
+  const conclusionStatus = document.getElementById("signal-conclusion-status");
+  error.textContent = "";
+  status.textContent = "";
+  measureDescription.textContent = "";
+  conclusionStatus.textContent = "";
+  conclusion.hidden = true;
+  conclusion.replaceChildren();
+  document.getElementById("signal-share-actions").hidden = true;
+  signalProtocolText = "";
+  conclude.hidden = true;
+  digitalReading = null;
+  measureBody.replaceChildren();
+  measureTable.hidden = true;
+  measureTitle.hidden = true;
+  document.getElementById("signal-trace").hidden = true;
+  document.getElementById("trace-title").hidden = true;
+  document.getElementById("trace-note").hidden = true;
+  button.disabled = true;
+  document.getElementById("score-example").disabled = true;
+  status.textContent = "Считаю кривую и разметку.";
+  try {
+    const response = await load();
+    const payload = await response.json();
+    if (!response.ok) {
+      error.textContent = payload.detail || "Запись не посчиталась.";
+      return;
+    }
+    const measurements = payload.measurements || {};
+    drawTrace(payload.trace || []);
+    const shownLines = new Set(["Ритм", "ЧСС", "Электрическая ось сердца", "Зубец P", "Интервал PQ", "Комплекс QRS", "Сегмент ST", "Зубец T", "Интервал QT", "Внеочередные комплексы"]);
+    (measurements.lines || []).filter((item) => shownLines.has(item.name)).forEach((item) => {
+      const tr = document.createElement("tr");
+      const name = document.createElement("td");
+      const value = document.createElement("td");
+      name.textContent = item.name;
+      value.textContent = item.value;
+      tr.append(name, value);
+      measureBody.appendChild(tr);
+    });
+    if (measureBody.children.length) {
+      measureTitle.hidden = false;
+      measureTable.hidden = false;
+    }
+    if (measurements.available && payload.scores && payload.scores.length) {
+      digitalReading = { measurements, scores: payload.scores };
+      conclude.hidden = false;
+    }
+  } catch (requestError) {
+    error.textContent = "Запись не посчиталась. Нажмите кнопку ещё раз.";
+  } finally {
+    button.disabled = false;
+    document.getElementById("score-example").disabled = false;
+    status.textContent = "";
+  }
+}
+
+document.getElementById("score-signal").onclick = () => {
+  const file = document.getElementById("signal-file").files[0];
+  if (!file) {
+    document.getElementById("signal-error").textContent = "Сначала выберите CSV.";
+    return;
+  }
+  const form = new FormData();
+  form.append("file", file);
+  form.append("sampling_rate", document.getElementById("signal-fs").value);
+  scoreDigital(() => fetch("/api/ecg/signal/csv", { method: "POST", body: form }));
+};
+
+document.getElementById("score-example").onclick = () => {
+  document.getElementById("panel-signal").scrollIntoView({ behavior: "smooth", block: "start" });
+  scoreDigital(() => fetch("/api/ecg/signal/example", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sampling_rate: Number(document.getElementById("signal-fs").value) }),
+  }));
+};
+
+document.getElementById("signal-conclude").onclick = async () => {
+  const status = document.getElementById("signal-conclusion-status");
+  const conclusion = document.getElementById("signal-conclusion");
+  const button = document.getElementById("signal-conclude");
+  status.textContent = "";
+  if (!digitalReading) {
+    status.textContent = "Сначала посчитайте запись.";
+    return;
+  }
+  button.disabled = true;
+  status.textContent = "Собираю заключение.";
+  try {
+    const response = await fetch("/api/ecg/signal/conclusion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(digitalReading),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      status.textContent = (payload && payload.detail) || "Заключение не собралось.";
+      return;
+    }
+    signalProtocolText = payload.protocol || "";
+    conclusion.hidden = false;
+    conclusion.replaceChildren();
+    const title = document.createElement("h2");
+    title.textContent = "Протокол описания ЭКГ";
+    conclusion.appendChild(title);
+    fillProtocolHead(conclusion);
+    renderReport(signalProtocolText, "signal-conclusion", false);
+    document.getElementById("signal-share-actions").hidden = !signalProtocolText.trim();
+    status.textContent = "";
+  } catch (requestError) {
+    status.textContent = "Заключение не собралось. Нажмите кнопку ещё раз.";
+  } finally {
+    button.disabled = false;
+  }
+};
+
+document.getElementById("download-signal-protocol").onclick = () => downloadProtocol(signalProtocolText);
+document.getElementById("share-signal-protocol").onclick = () => {
+  shareProtocol(signalProtocolText, document.getElementById("signal-conclusion-status"));
 };
 </script>
 </body>

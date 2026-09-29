@@ -1,3 +1,3 @@
-Каталог зарезервирован под HTTP API.
+HTTP-сервис: `app.py`.
 
-На шаге 1 сервер не поднимался. Вызов ансамбля находится в `ecg_engine` и не зависит от production Doctor Opus.
+Страницу отдаёт `GET /`. Снимок или текст идут в `POST /api/ecg/analyze`, бланк — в `POST /api/ecg/protocol`. Цифровой CSV считается в `POST /api/ecg/signal/csv`, заключение — в `POST /api/ecg/signal/conclusion`. Ансамбль 531 этим сервисом не вызывается.

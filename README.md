@@ -1,43 +1,27 @@
 # Doctor Opus ECG Engine
 
-Исследовательский каркас для ECG. Сейчас в нём работает только уже обученный ансамбль из `ecg_web_up`: CSV с 531 колонкой в фиксированном порядке, три головы, среднее сигмоид, 24 кода SCP.
+Исследовательское приложение для ЭКГ. Это не медицинское изделие.
 
-Приложение не является медицинским изделием. Score модели не калибровался как клиническая вероятность.
+Два входа:
 
-## Три входа
-
-```text
-531 CSV ───────────────→ этот ансамбль
-Raw 12-lead ECG → экстрактор 531 ещё не доказан
-ECG image ─────────────→ vision из Doctor Opus, ещё не перенесён
-```
-
-Состояние raw-пути: `docs/RAW_TO_531_STATUS.md` (`NOT YET PROVEN`).
+- снимок или текст разбирают Gemini 3.8 Flash и Opus 5.5;
+- цифровую запись около 10 секунд и 12 отведений считает ECGFounder; по той же кривой снимается разметка зубцов: ЧСС, интервалы, смещение ST и внеочередные комплексы.
 
 ## Запуск
 
-Нужен Python 3.11.
+Нужен Python 3.11. Веса ECGFounder лежат локально в `models/ecgfounder/12_lead_ECGFounder.pth` и в git не входят.
 
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m ecg_engine.predict tests/fixtures/another_ecg_features.csv
+PYTHONPATH=. uvicorn backend.app:app --port 8765
 ```
 
-Проверка схемы и сверка с исходным `ecg_web_up`:
+Страница: [http://127.0.0.1:8765](http://127.0.0.1:8765).
+
+Разбор снимка и текста требует `LLM_API_KEY` или `OPENROUTER_API_KEY`. Без ключа этот канал отвечает 503.
 
 ```bash
-pytest
+PYTHONPATH=. pytest
 ```
-
-Сверка ищет локальный снимок `ecg_web_up` в `_audit/ecg_web_up` и пропускается, если его нет. Числовой отчёт последнего прогона лежит в `tests/regression/baseline_comparison.json`.
-
-## Документы
-
-- `docs/ECG_MODEL_SPEC.md` — как устроена исходная сеть
-- `docs/FEATURE_SCHEMA.md` — контракт колонок и нормализации
-- `docs/SCP_MAPPING.md` — индексы и расхождения имён
-- `docs/DOCTOR_OPUS_ECG_AUDIT.md` — что есть в production ECG и что не переносилось
-- `docs/SOURCE_PROVENANCE.md` — откуда скопированы файлы
-- `docs/ARCHITECTURE.md` — что уже есть и что сознательно пусто

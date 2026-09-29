@@ -1,4 +1,5 @@
 _audit/
+.env
 .venv/
 research/ecgdeli_reproduction/data/
 research/ecgdeli_reproduction/output/
@@ -8,3 +9,4 @@ __pycache__/
 benchmark/data/
 benchmark/cache/
 benchmark/results/**/*.pth
+models/ecgfounder/*.pth
